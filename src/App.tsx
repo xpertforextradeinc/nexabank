@@ -186,7 +186,7 @@ function mapNotificationFromDB(db: any): BankNotification {
 }
 
 export default function App() {
-  // Session authentication states
+    // Session authentication states
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
@@ -234,6 +234,7 @@ export default function App() {
 
   // Safe retry-fetch helper to ensure trigger handles profiles correctly on brand new signups
   const fetchProfileWithRetry = async (userId: string, attempts = 5, delay = 500): Promise<any> => {
+    if (!isSupabaseConfigured()) return null;
     for (let i = 0; i < attempts; i++) {
       const { data, error } = await supabase
         .from('profiles')
@@ -248,6 +249,7 @@ export default function App() {
 
   // Core data loaders mapping to role
   const loadUserData = async (userId: string, role: 'user' | 'admin') => {
+    if (!isSupabaseConfigured()) return;
     try {
       // 1. Fetch authenticated user profile
       const rawProfile = await fetchProfileWithRetry(userId);
