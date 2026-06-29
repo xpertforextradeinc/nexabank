@@ -264,6 +264,6 @@ Distributed under the **MIT License**. See `LICENSE` for details.
 
 ## 👤 Author
 
-*   **Name**: NexaBank Architecture Team
+*   **Author**: Luckman World
 *   **Email**: support@nexabank.io
 *   **Website**: [nexabank.io](https://nexabank.io)
