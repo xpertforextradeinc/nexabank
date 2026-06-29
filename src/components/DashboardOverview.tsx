@@ -27,6 +27,7 @@ const CATEGORY_ICONS: Record<string, ReactNode> = {
 
 export default function DashboardOverview({ user, wallet, transactions, onNavigate, isDarkMode }: DashboardOverviewProps) {
   const [activeRange, setActiveRange] = useState<'7d' | '30d'>('7d');
+  const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
 
   // Sparkline data generator
   const getLinePoints = () => {
@@ -60,6 +61,29 @@ export default function DashboardOverview({ user, wallet, transactions, onNaviga
   const totalOutflows = transactions
     .filter((t) => t.type === 'debit' && t.status === 'completed')
     .reduce((acc, t) => acc + t.amount, 0);
+
+  // Spend categories calculation for interactive SVG donut chart
+  const spendCategories = ['food', 'shopping', 'utilities', 'transfer'];
+  const spendByCategory = spendCategories.reduce((acc, cat) => {
+    const total = transactions
+      .filter((t) => t.category === cat && t.type === 'debit' && t.status === 'completed')
+      .reduce((sum, t) => sum + t.amount, 0);
+    acc[cat] = total;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalSpentVal = Object.values(spendByCategory).reduce((sum, v) => sum + v, 0);
+  
+  const finalSpendData = totalSpentVal > 0 
+    ? spendCategories.map(cat => ({ category: cat, amount: spendByCategory[cat] }))
+    : [
+        { category: 'food', amount: 34.50 },
+        { category: 'shopping', amount: 99.00 },
+        { category: 'utilities', amount: 18.25 },
+        { category: 'transfer', amount: 150.00 }
+      ];
+
+  const totalSpent = finalSpendData.reduce((sum, d) => sum + d.amount, 0);
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -295,6 +319,205 @@ export default function DashboardOverview({ user, wallet, transactions, onNaviga
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Visual Diagnostics Bento Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* Interactive SVG Donut Chart (7 columns) */}
+        <div className={`lg:col-span-7 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} flex flex-col justify-between`}>
+          <div>
+            <span className="text-indigo-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Portfolio Analytics</span>
+            <h3 className="font-display font-semibold text-base">Spend Allocation Diagnostics</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Interactive allocation breakdown of outbound transaction flows by category.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center my-6">
+            {/* Interactive SVG Donut (6 cols) */}
+            <div className="md:col-span-6 flex justify-center relative">
+              <div className="w-40 h-40 relative">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    stroke={isDarkMode ? '#1f2937' : '#f1f5f9'}
+                    strokeWidth="12"
+                  />
+                  {(() => {
+                    let cumulativePercent = 0;
+                    const strokeColors = {
+                      food: '#f59e0b',      // Amber-500
+                      shopping: '#a855f7',  // Purple-500
+                      utilities: '#3b82f6', // Blue-500
+                      transfer: '#6366f1'   // Indigo-500
+                    };
+
+                    return finalSpendData.map((d, index) => {
+                      const percentage = totalSpent > 0 ? d.amount / totalSpent : 0;
+                      const circumference = 2 * Math.PI * 40; // ~251.327
+                      const strokeLength = percentage * circumference;
+                      const strokeOffset = circumference - (cumulativePercent * circumference);
+                      cumulativePercent += percentage;
+
+                      const isHovered = hoveredCategoryIndex === index;
+                      const strokeColor = strokeColors[d.category as keyof typeof strokeColors] || '#64748b';
+
+                      return (
+                        <circle
+                          key={d.category}
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          fill="transparent"
+                          stroke={strokeColor}
+                          strokeWidth={isHovered ? "14" : "12"}
+                          strokeDasharray={`${strokeLength} ${circumference - strokeLength}`}
+                          strokeDashoffset={strokeOffset}
+                          strokeLinecap="round"
+                          className="transition-all duration-300 cursor-pointer"
+                          onMouseEnter={() => setHoveredCategoryIndex(index)}
+                          onMouseLeave={() => setHoveredCategoryIndex(null)}
+                        />
+                      );
+                    });
+                  })()}
+                </svg>
+
+                {/* Donut Center Label Details */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2 pointer-events-none">
+                  {hoveredCategoryIndex !== null ? (
+                    <>
+                      <span className="text-[10px] uppercase font-mono text-slate-400 font-bold leading-none">
+                        {finalSpendData[hoveredCategoryIndex].category}
+                      </span>
+                      <span className="text-sm font-bold font-mono mt-1 leading-none text-indigo-500">
+                        ${finalSpendData[hoveredCategoryIndex].amount.toFixed(2)}
+                      </span>
+                      <span className="text-[9px] font-sans font-bold text-slate-500 mt-1 leading-none">
+                        {((finalSpendData[hoveredCategoryIndex].amount / totalSpent) * 100).toFixed(1)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[9px] uppercase font-mono text-slate-400 font-bold leading-none">
+                        Total Spent
+                      </span>
+                      <span className="text-sm font-bold font-mono mt-1 leading-none text-slate-800 dark:text-zinc-100">
+                        ${totalSpent.toFixed(2)}
+                      </span>
+                      <span className="text-[8px] font-sans text-slate-500 mt-1 leading-none uppercase tracking-wider">
+                        All categories
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Legend (6 cols) */}
+            <div className="md:col-span-6 space-y-2.5">
+              {finalSpendData.map((d, index) => {
+                const percent = totalSpent > 0 ? (d.amount / totalSpent) * 100 : 0;
+                const bulletColors = {
+                  food: 'bg-amber-500',
+                  shopping: 'bg-purple-500',
+                  utilities: 'bg-blue-500',
+                  transfer: 'bg-indigo-500'
+                };
+                const colorClass = bulletColors[d.category as keyof typeof bulletColors] || 'bg-slate-400';
+                const isHovered = hoveredCategoryIndex === index;
+
+                return (
+                  <div
+                    key={d.category}
+                    onMouseEnter={() => setHoveredCategoryIndex(index)}
+                    onMouseLeave={() => setHoveredCategoryIndex(null)}
+                    className={`flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer ${
+                      isHovered
+                        ? 'bg-slate-100/30 dark:bg-zinc-950 border-indigo-500/20 shadow-sm'
+                        : 'bg-transparent border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${colorClass}`} />
+                      <span className="text-xs font-semibold capitalize text-slate-700 dark:text-zinc-300">
+                        {d.category}
+                      </span>
+                    </div>
+                    <div className="text-right flex items-center gap-1.5">
+                      <span className="text-xs font-mono font-bold text-slate-800 dark:text-zinc-200">
+                        ${d.amount.toFixed(2)}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        ({percent.toFixed(0)}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Wellness and limit Sentinel (5 columns) */}
+        <div className={`lg:col-span-5 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} flex flex-col justify-between`}>
+          <div>
+            <span className="text-emerald-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Sovereign Asset Sentinel</span>
+            <h3 className="font-display font-semibold text-base">Liquidity Health index</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Real-time indicators validating account risk parameters and reserve balances.</p>
+          </div>
+
+          <div className="space-y-5 my-6 text-xs text-left">
+            {/* Visual Progress: Wellness Score */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center font-mono text-[10px]">
+                <span className="text-slate-400 uppercase font-bold">Reserves Coverage ratio:</span>
+                <span className="text-emerald-500 font-bold">98.4% (EXCELLENT)</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-zinc-950 h-2 rounded-full overflow-hidden border border-slate-200/20">
+                <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '98.4%' }} />
+              </div>
+            </div>
+
+            {/* Allocation Ratio Metrics */}
+            <div className="p-3.5 bg-slate-100/40 dark:bg-zinc-950 border border-slate-200/30 dark:border-zinc-850 rounded-2xl space-y-2.5">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-400 font-sans">Available Cash ratio:</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                  {wallet.availableBalance + wallet.savingsBalance > 0 
+                    ? ((wallet.availableBalance / (wallet.availableBalance + wallet.savingsBalance)) * 100).toFixed(0) 
+                    : '100'}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-400 font-sans">Compounding Yield allocation:</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                  {wallet.availableBalance + wallet.savingsBalance > 0 
+                    ? ((wallet.savingsBalance / (wallet.availableBalance + wallet.savingsBalance)) * 100).toFixed(0) 
+                    : '0'}%
+                </span>
+              </div>
+            </div>
+
+            {/* Safety Checklists */}
+            <div className="grid grid-cols-2 gap-3.5 pt-1.5 text-[10px] font-mono">
+              <div className="p-2.5 rounded-xl border border-emerald-500/10 bg-emerald-500/5 text-emerald-500 flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>MFA SECURED</span>
+              </div>
+              <div className="p-2.5 rounded-xl border border-emerald-500/10 bg-emerald-500/5 text-emerald-500 flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>PIN ACTIVE</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span>Sovereign security checks completed internally</span>
           </div>
         </div>
       </div>

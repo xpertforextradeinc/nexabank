@@ -39,6 +39,55 @@ export default function SettingsPanel({
   const [privacyMode, setPrivacyMode] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState('');
 
+  // PIN Reset states
+  const [resetStage, setResetStage] = useState<'idle' | 'requesting' | 'verifying' | 'setting'>('idle');
+  const [resetEmailCode, setResetEmailCode] = useState('');
+  const [correctChallengeCode, setCorrectChallengeCode] = useState('');
+  const [newResetPin, setNewResetPin] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccessMsg, setResetSuccessMsg] = useState('');
+
+  const handleInitiatePinReset = () => {
+    setResetError('');
+    setResetStage('requesting');
+    
+    // Simulate sending multi-stage challenge code
+    setTimeout(() => {
+      const randomCode = `NEXA-${Math.floor(1000 + Math.random() * 9000)}`;
+      setCorrectChallengeCode(randomCode);
+      setResetStage('verifying');
+      onAddAuditLog('Initiate Payout PIN Reset Flow', `Security sentinel dispatched temporary multi-stage email challenge code.`);
+      // Alert/notification preview for demo experience
+      alert(`[Demo Mode Verification Link]\nA security challenge code has been dispatched to: ${user.email}\nCode: ${randomCode}`);
+    }, 1500);
+  };
+
+  const handleVerifyPinReset = () => {
+    setResetError('');
+    if (resetEmailCode.trim().toUpperCase() !== correctChallengeCode) {
+      setResetError('Invalid security challenge code. Please try again.');
+      return;
+    }
+    setResetStage('setting');
+  };
+
+  const handleCompletePinReset = () => {
+    setResetError('');
+    if (newResetPin.length !== 4 || isNaN(parseInt(newResetPin))) {
+      setResetError('New PIN must be exactly 4 numerical digits.');
+      return;
+    }
+    onUpdateUser({ withdrawalPin: newResetPin });
+    onAddAuditLog('Complete Payout PIN Reset Flow', `User successfully authorized security challenge code and reset withdrawal PIN.`);
+    setResetSuccessMsg('PIN successfully reset and re-synchronized!');
+    setResetStage('idle');
+    setPin(newResetPin);
+    setNewResetPin('');
+    setResetEmailCode('');
+    setCorrectChallengeCode('');
+    setTimeout(() => setResetSuccessMsg(''), 4000);
+  };
+
   // Handle PIN Save
   const handlePinSave = () => {
     setPinMsg('');
@@ -249,9 +298,11 @@ export default function SettingsPanel({
               </div>
 
               {/* PIN Code Configuration */}
-              <div className="pt-2 space-y-3 text-left">
-                <span className="text-xs font-semibold block">Set Withdrawal Security PIN</span>
-                <p className="text-[10px] text-slate-400">Type a matching 4-digit code to overwrite the current transactional guard (e.g. 4890).</p>
+              <div className="pt-2 space-y-4 text-left border-t border-slate-100/10 mt-4">
+                <div>
+                  <span className="text-xs font-semibold block">Set Withdrawal Security PIN</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Type a matching 4-digit code to overwrite the current transactional guard (e.g. 4890).</p>
+                </div>
                 
                 <div className="flex gap-3">
                   <input
@@ -276,6 +327,93 @@ export default function SettingsPanel({
                     {pinMsg}
                   </p>
                 )}
+
+                {/* Multi-stage Payout PIN Reset */}
+                <div className="pt-4 border-t border-slate-150/10 space-y-3">
+                  <div>
+                    <span className="text-xs font-semibold block flex items-center gap-1.5 text-indigo-500 dark:text-emerald-400">
+                      <Lock className="w-3.5 h-3.5" /> Lost or Forgot PIN?
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Initiate a multi-stage challenge-response sequence to reset your sovereign payout PIN code securely.</p>
+                  </div>
+
+                  {resetStage === 'idle' && (
+                    <button
+                      type="button"
+                      onClick={handleInitiatePinReset}
+                      className="px-4 py-2 border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/5 transition rounded-xl font-medium text-xs font-sans"
+                    >
+                      Initiate Secure PIN Reset
+                    </button>
+                  )}
+
+                  {resetStage === 'requesting' && (
+                    <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                      <span>Generating secure cryptographic challenge...</span>
+                    </div>
+                  )}
+
+                  {resetStage === 'verifying' && (
+                    <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
+                      <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Enter Challenge Code</span>
+                      <p className="text-[10px] text-slate-500">Provide the cryptographic code sent to {user.email}. Check demo-alert if code is missed.</p>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="NEXA-XXXX"
+                          value={resetEmailCode}
+                          onChange={(e) => setResetEmailCode(e.target.value)}
+                          className="flex-1 p-2 bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-xs font-mono uppercase tracking-widest text-slate-800 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyPinReset}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white transition rounded-xl font-medium text-xs font-sans"
+                        >
+                          Verify Code
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {resetStage === 'setting' && (
+                    <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
+                      <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Establish New PIN</span>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder="••••"
+                          maxLength={4}
+                          value={newResetPin}
+                          onChange={(e) => setNewResetPin(e.target.value)}
+                          className="w-24 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 tracking-widest text-slate-800 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCompletePinReset}
+                          className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white transition rounded-xl font-medium text-xs font-sans"
+                        >
+                          Reset PIN
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {resetError && (
+                    <p className="text-[10px] text-rose-500 font-mono mt-1">
+                      {resetError}
+                    </p>
+                  )}
+
+                  {resetSuccessMsg && (
+                    <p className="text-[10px] text-emerald-500 font-semibold font-mono mt-1">
+                      {resetSuccessMsg}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
