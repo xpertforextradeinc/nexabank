@@ -1,0 +1,6 @@
+{
+  "name": "NexaBank",
+  "description": "Next-generation digital banking experience with interactive financial dashboards, smart card controls, and a real-time transaction simulator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
