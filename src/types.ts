@@ -14,6 +14,30 @@ export interface UserProfile {
   avatar: string;
   joinedDate: string;
   withdrawalsLocked?: boolean;
+  // Step 1 - Personal Details
+  middleName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  // Step 2 - Address
+  country?: string;
+  stateProvince?: string;
+  city?: string;
+  zipPostalCode?: string;
+  residentialAddress?: string;
+  // Step 3 - Financial Profile
+  employmentStatus?: string;
+  occupation?: string;
+  employer?: string;
+  annualIncome?: number;
+  sourceFunds?: string;
+  // Step 4 - Identity
+  govIdType?: string;
+  govIdNumber?: string;
+  nationalIdSsn?: string;
+  uploadedIdUrl?: string;
+  // Generated Core Banking Numbers
+  accountNumber?: string;
+  routingNumber?: string;
 }
 
 export interface Wallet {

@@ -9,7 +9,7 @@ interface DepositWithdrawProps {
   user: UserProfile;
   wallet: Wallet;
   onAddDeposit: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'credit_card') => void;
-  onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt', pin?: string) => string | null; // returns error message if any
+  onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt', pin?: string) => string | null | Promise<string | null>; // returns error message if any
   isDarkMode: boolean;
 }
 
@@ -96,9 +96,10 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }
 
     setLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
+      const result = onAddWithdrawal(amt, wthMethod, enteredPin);
+      const wthError = result instanceof Promise ? await result : result;
       setLoading(false);
-      const wthError = onAddWithdrawal(amt, wthMethod, enteredPin);
       if (wthError) {
         setError(wthError);
         return;

@@ -18,7 +18,31 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   verification_status TEXT CHECK (verification_status IN ('verified', 'pending', 'unverified')) DEFAULT 'unverified',
   avatar TEXT,
   joined_date TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-  withdrawals_locked BOOLEAN DEFAULT false
+  withdrawals_locked BOOLEAN DEFAULT false,
+  -- Step 1 - Personal Details
+  middle_name TEXT,
+  date_of_birth DATE,
+  gender TEXT,
+  -- Step 2 - Address
+  country TEXT,
+  state_province TEXT,
+  city TEXT,
+  zip_postal_code TEXT,
+  residential_address TEXT,
+  -- Step 3 - Financial Profile
+  employment_status TEXT,
+  occupation TEXT,
+  employer TEXT,
+  annual_income NUMERIC,
+  source_funds TEXT,
+  -- Step 4 - Identity
+  gov_id_type TEXT,
+  gov_id_number TEXT,
+  national_id_ssn TEXT,
+  uploaded_id_url TEXT,
+  -- Generated Core Banking Numbers
+  account_number TEXT UNIQUE,
+  routing_number TEXT
 );
 
 -- Wallets Table
@@ -210,7 +234,26 @@ BEGIN
     is_upgraded, 
     phone, 
     mfa_enabled, 
-    withdrawals_locked
+    withdrawals_locked,
+    middle_name,
+    date_of_birth,
+    gender,
+    country,
+    state_province,
+    city,
+    zip_postal_code,
+    residential_address,
+    employment_status,
+    occupation,
+    employer,
+    annual_income,
+    source_funds,
+    gov_id_type,
+    gov_id_number,
+    national_id_ssn,
+    uploaded_id_url,
+    account_number,
+    routing_number
   )
   VALUES (
     new.id,
@@ -222,11 +265,30 @@ BEGIN
     CASE WHEN new.email_confirmed_at IS NOT NULL THEN 'verified'::text ELSE 'unverified'::text END,
     timezone('utc'::text, now()),
     true,
-    (floor(random() * 9000 + 1000))::text,
+    COALESCE(new.raw_user_meta_data->>'withdrawal_pin', (floor(random() * 9000 + 1000))::text),
     false,
-    COALESCE(new.phone, '+1 (555) 019-2831'),
+    COALESCE(new.phone, new.raw_user_meta_data->>'phone', '+1 (555) 019-2831'),
     false,
-    false
+    false,
+    new.raw_user_meta_data->>'middle_name',
+    (new.raw_user_meta_data->>'date_of_birth')::date,
+    new.raw_user_meta_data->>'gender',
+    COALESCE(new.raw_user_meta_data->>'country', 'US'),
+    new.raw_user_meta_data->>'state_province',
+    new.raw_user_meta_data->>'city',
+    new.raw_user_meta_data->>'zip_postal_code',
+    new.raw_user_meta_data->>'residential_address',
+    new.raw_user_meta_data->>'employment_status',
+    new.raw_user_meta_data->>'occupation',
+    new.raw_user_meta_data->>'employer',
+    (new.raw_user_meta_data->>'annual_income')::numeric,
+    new.raw_user_meta_data->>'source_funds',
+    new.raw_user_meta_data->>'gov_id_type',
+    new.raw_user_meta_data->>'gov_id_number',
+    new.raw_user_meta_data->>'national_id_ssn',
+    new.raw_user_meta_data->>'uploaded_id_url',
+    COALESCE(new.raw_user_meta_data->>'account_number', 'NEXA-' || (floor(random() * 900000000 + 100000000))::text || '-DEMO'),
+    COALESCE(new.raw_user_meta_data->>'routing_number', '021000021')
   );
 
   INSERT INTO public.wallets (user_id, main_balance, available_balance, pending_balance, savings_balance)
