@@ -1,8 +1,42 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Fallback to placeholder to prevent client-side initialization crash if environment variables aren't provided yet
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string>;
+  }
+}
+
+// Helper to retrieve env variables safely. By using literal static lookups,
+// Vite's build-time static replacement engine can match the tokens and replace them
+// with the actual environment variable values during compile time.
+export const getSupabaseUrl = (): string => {
+  const url = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+  if (url && url !== 'https://placeholder-url.supabase.co') return url;
+  
+  // Fallback to process.env if available
+  if (typeof process !== 'undefined' && process.env) {
+    const pUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    if (pUrl && pUrl !== 'https://placeholder-url.supabase.co') return pUrl;
+  }
+  
+  return 'https://placeholder-url.supabase.co';
+};
+
+export const getSupabaseAnonKey = (): string => {
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
+  if (key && key !== 'placeholder-anon-key') return key;
+
+  // Fallback to process.env if available
+  if (typeof process !== 'undefined' && process.env) {
+    const pKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    if (pKey && pKey !== 'placeholder-anon-key') return pKey;
+  }
+
+  return 'placeholder-anon-key';
+};
+
+const supabaseUrl = getSupabaseUrl();
+const supabaseAnonKey = getSupabaseAnonKey();
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -13,10 +47,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 export const isSupabaseConfigured = (): boolean => {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
   return (
-    !!(import.meta as any).env.VITE_SUPABASE_URL && 
-    (import.meta as any).env.VITE_SUPABASE_URL !== 'https://placeholder-url.supabase.co' &&
-    !!(import.meta as any).env.VITE_SUPABASE_ANON_KEY &&
-    (import.meta as any).env.VITE_SUPABASE_ANON_KEY !== 'placeholder-anon-key'
+    !!url && 
+    url !== 'https://placeholder-url.supabase.co' &&
+    !!key && 
+    key !== 'placeholder-anon-key'
   );
 };

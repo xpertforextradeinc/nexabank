@@ -60,7 +60,7 @@ export default function InteractiveCard({ card, onToggleFreeze, onChangeColor }:
               <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">Platinum Member</span>
             </div>
             <div className="flex items-center gap-3">
-              {/* Gold Simulated Electronic Chip */}
+              {/* Gold EMV Smart Chip */}
               <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 border border-amber-300/40 relative overflow-hidden flex items-center justify-center">
                 <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-[1px] p-[2px]">
                   {Array.from({ length: 9 }).map((_, i) => (

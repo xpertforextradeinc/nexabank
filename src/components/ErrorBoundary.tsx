@@ -26,7 +26,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
     // Console error logging for development only
-    const isDev = (import.meta as any).env?.DEV;
+    const isDev = import.meta.env.DEV;
     if (isDev) {
       console.error('NexaBank Error Boundary caught an exception:', error, errorInfo);
     }
@@ -49,7 +49,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      const isDev = (import.meta as any).env?.DEV;
+      const isDev = import.meta.env.DEV;
 
       return (
         <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden select-none">

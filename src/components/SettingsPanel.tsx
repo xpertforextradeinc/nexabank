@@ -185,7 +185,7 @@ export default function SettingsPanel({
 
                 <Upload className="w-8 h-8 text-slate-400 mb-2.5 animate-bounce" />
                 <span className="text-xs font-semibold block mb-1">Drag and drop passport scan, or click to browse</span>
-                <p className="text-[10px] text-slate-400">PDF, JPG, PNG sizes up to 10MB verified automatically inside sandbox.</p>
+                <p className="text-[10px] text-slate-400">PDF, JPG, PNG sizes up to 10MB processed automatically by our secure verification engine.</p>
 
                 {kycFile && (
                   <div className="mt-3.5 p-2 bg-slate-100 dark:bg-zinc-950 rounded-xl border border-slate-200/50 dark:border-zinc-850 flex items-center gap-2">

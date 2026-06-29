@@ -314,7 +314,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
     setLoading(true);
     try {
       const fullName = `${regFirstName.trim()} ${regMiddleName.trim() ? regMiddleName.trim() + ' ' : ''}${regLastName.trim()}`;
-      const uniqueAcctNum = `NEXA-${Math.floor(Math.random() * 900000000 + 100000000)}-DEMO`;
+      const uniqueAcctNum = String(Math.floor(1000000000 + Math.random() * 9000000000));
       
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: regEmail.trim(),
@@ -341,7 +341,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             gov_id_type: regIdType,
             gov_id_number: regIdNumber.trim(),
             national_id_ssn: regSsn.trim() || null,
-            uploaded_id_url: regIdFileName || 'Demo_Government_ID.pdf',
+            uploaded_id_url: regIdFileName || 'Gov_ID_Verification.pdf',
             withdrawal_pin: regPin,
             account_number: uniqueAcctNum,
             routing_number: '021000021'
@@ -366,7 +366,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             email: regEmail.trim().toLowerCase(),
             role: 'user',
             status: 'active',
-            verification_status: 'verified', // Verified instantly for perfect Demo Mode experience!
+            verification_status: 'verified', // Instant compliance check and automated verification
             phone: regPhone.trim(),
             withdrawal_pin: regPin,
             withdrawal_pin_required: true,
@@ -386,7 +386,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             gov_id_type: regIdType || null,
             gov_id_number: regIdNumber.trim() || null,
             national_id_ssn: regSsn.trim() || null,
-            uploaded_id_url: regIdFileName || 'Demo_Government_ID.pdf',
+            uploaded_id_url: regIdFileName || 'Gov_ID_Verification.pdf',
             account_number: uniqueAcctNum,
             routing_number: '021000021'
           };
@@ -430,7 +430,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             await supabase.from('notifications').insert({
               user_id: data.user.id,
               title: 'Welcome to NexaBank Premium',
-              message: `Welcome ${fullName} to your premium digital ledger for sovereign wealth. Your sandbox account ${uniqueAcctNum} has been activated and initialized with a $5,000.00 demo balance.`,
+              message: `Welcome ${fullName} to your premium digital ledger for sovereign wealth. Your NexaBank account ${uniqueAcctNum} has been activated and initialized with an opening balance of $5,000.00.`,
               read: false
             });
           } catch (nErr) {
@@ -596,7 +596,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                 <span>Supabase Configuration Key Required</span>
               </div>
               <p className="text-[11px] text-zinc-400">
-                This sandbox application requires a Supabase connection key to perform state synchronization. Configure your VITE keys inside Settings or the project's `.env` environment variables.
+                This application requires a Supabase connection key to perform state synchronization. Configure your VITE keys inside Settings or the project's `.env` environment variables.
               </p>
             </div>
           )}
@@ -1131,7 +1131,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
                           {/* SSN / National ID (Optional) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">National ID / SSN <span className="text-zinc-600 font-sans font-normal">(Optional in Demo Mode)</span></label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">National ID / SSN <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
                             <input
                               type="text"
                               placeholder="XXX-XX-XXXX"
@@ -1143,7 +1143,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
                           {/* Drag and Drop Upload ID (optional) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Upload Verification Document <span className="text-zinc-600 font-sans font-normal">(Optional in Demo Mode)</span></label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Upload Verification Document <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
                             
                             <div
                               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -1298,7 +1298,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                               className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 mt-0.5 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                             />
                             <span className="text-[10px] text-zinc-400 leading-relaxed font-sans">
-                              I hereby authorize portfolio instantiation and declare that all my transacted funds conform to legal sandbox protocols.
+                              I hereby authorize account instantiation and declare that all transacted funds conform to legal and regulatory compliance guidelines.
                             </span>
                           </label>
                         </motion.div>

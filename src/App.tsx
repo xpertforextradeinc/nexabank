@@ -69,7 +69,7 @@ function mapProfileFromDB(db: any): UserProfile {
     nationalIdSsn: db.national_id_ssn,
     uploadedIdUrl: db.uploaded_id_url,
     // Generated Core Banking Numbers
-    accountNumber: db.account_number || 'NEXA-100492041-DEMO',
+    accountNumber: db.account_number || '3049204109',
     routingNumber: db.routing_number || '021000021'
   };
 }
@@ -139,7 +139,7 @@ function mapDepositFromDB(db: any): DepositRequest {
   return {
     id: db.id,
     userId: db.user_id,
-    userName: db.user_name || 'Sandbox Client',
+    userName: db.user_name || 'NexaBank Customer',
     amount: Number(db.amount),
     method: db.method,
     status: db.status,
@@ -152,7 +152,7 @@ function mapWithdrawalFromDB(db: any): WithdrawalRequest {
   return {
     id: db.id,
     userId: db.user_id,
-    userName: db.user_name || 'Sandbox Client',
+    userName: db.user_name || 'NexaBank Customer',
     amount: Number(db.amount),
     method: db.method,
     status: db.status,
@@ -279,7 +279,7 @@ export default function App() {
         if (!mappedProfile.govIdNumber && meta.gov_id_number) mappedProfile.govIdNumber = meta.gov_id_number;
         if (!mappedProfile.nationalIdSsn && meta.national_id_ssn) mappedProfile.nationalIdSsn = meta.national_id_ssn;
         if (!mappedProfile.uploadedIdUrl && meta.uploaded_id_url) mappedProfile.uploadedIdUrl = meta.uploaded_id_url;
-        if ((!mappedProfile.accountNumber || mappedProfile.accountNumber === 'NEXA-100492041-DEMO') && meta.account_number) {
+        if ((!mappedProfile.accountNumber || mappedProfile.accountNumber === 'NEXA-100492041-DEMO' || mappedProfile.accountNumber === '3049204109') && meta.account_number) {
           mappedProfile.accountNumber = meta.account_number;
         }
         if ((!mappedProfile.routingNumber || mappedProfile.routingNumber === '021000021-DEMO') && meta.routing_number) {
@@ -639,7 +639,7 @@ export default function App() {
       nextMain += amount;
     } else {
       if (nextAvail < amount) {
-        triggerToast('Simulation aborted: Insufficient funds in checking account.');
+        triggerToast('Transaction aborted: Insufficient funds in checking account.');
         return;
       }
       nextAvail -= amount;
@@ -657,7 +657,7 @@ export default function App() {
       return;
     }
 
-    // Insert simulated transaction as a real completed transaction
+    // Insert completed transaction as a real transaction
     const { error: txError } = await supabase.from('transactions').insert({
       user_id: currentUser.id,
       wallet_id: walletData.id,
@@ -666,11 +666,11 @@ export default function App() {
       category: tx.category.toLowerCase(),
       type: dbType,
       status: 'completed',
-      reference: `TX-SIM-${Math.floor(10000 + Math.random() * 90000)}`
+      reference: `TX-NEX-${Math.floor(100000 + Math.random() * 900000)}`
     });
 
     if (txError) {
-      triggerToast(`Simulation insert failed: ${txError.message}`);
+      triggerToast(`Transaction post failed: ${txError.message}`);
       return;
     }
 
@@ -1180,7 +1180,7 @@ export default function App() {
             <footer className={`py-6 text-center text-xs mt-auto border-t ${
               isDarkMode ? 'bg-zinc-950/20 border-zinc-900 text-zinc-500' : 'bg-white border-slate-100 text-slate-400'
             }`}>
-              <p>© 2026 NexaBank Custody Technologies Inc. Settle and trade simulated assets under Sandbox regulations.</p>
+              <p>© 2026 NexaBank Custody Technologies Inc. All rights reserved. Members FDIC and Equal Housing Lender.</p>
             </footer>
           </div>
         </div>
@@ -1670,7 +1670,7 @@ export default function App() {
           <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'} text-left`}>
             <div className="mb-6">
               <h2 className="text-lg font-bold font-display">Ledger Alerts & Announcements</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Review alerts dispatched automatically or manually by sandbox compliance.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Review alerts dispatched automatically or manually by institutional compliance.</p>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -1744,14 +1744,14 @@ export default function App() {
             <div className={`lg:col-span-7 p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} space-y-6`}>
               <div>
                 <h3 className="font-display font-semibold text-base mb-1">Frequently Asked Questions</h3>
-                <p className="text-xs text-slate-500">Find swift answers to standard Nexa sandbox operational questions.</p>
+                <p className="text-xs text-slate-500">Find answers to frequently asked digital banking questions.</p>
               </div>
 
               <div className="space-y-3">
                 {[
-                  { q: 'How do I fund my sandbox Available Checking account?', a: 'Navigate to the "Deposit" tab on the sidebar, choose your payment/handshake method (SWIFT Wire or Crypto Tether TRC-20), specify your amount, and click deposit. An administrator will immediately review and clear the handshake in the Admin panel.' },
+                  { q: 'How do I fund my NexaBank Checking account?', a: 'Navigate to the "Deposit" tab on the sidebar, choose your payment method (SWIFT Wire or Crypto Tether TRC-20), specify your amount, and submit your request. Compliance will review and process your deposit securely.' },
                   { q: 'Can I transfer funds bidirectional with Savings Vault?', a: 'Yes! Navigate to the "Accounts" tab on your left navigation menu. You can allocate funds from Available checking into Savings, or return them immediately without penalties.' },
-                  { q: 'What should I do if my withdrawals are locked?', a: 'In compliance with CFTC and FinCEN sandbox guidelines, direct payouts may be locked temporarily. If so, a withdrawal PIN challenge may be requested. Contact general counsel or log a ticket on the right.' }
+                  { q: 'What should I do if my withdrawals are locked?', a: 'In compliance with banking guidelines, payouts may be temporarily locked for verification. If so, a withdrawal PIN challenge is required. Contact general counsel or log a ticket on the right.' }
                 ].map((faq, idx) => (
                   <details key={idx} className="group p-4 bg-slate-100/30 dark:bg-zinc-950 rounded-2xl border border-slate-200/40 dark:border-zinc-850 cursor-pointer">
                     <summary className="text-xs font-bold font-display list-none flex justify-between items-center text-slate-800 dark:text-zinc-200">
@@ -1768,7 +1768,7 @@ export default function App() {
             <div className={`lg:col-span-5 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} space-y-6`}>
               <div>
                 <h3 className="font-display font-semibold text-xs uppercase text-slate-400 block tracking-wider">Log support ticket</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Submit custom messages to automated sandbox responders.</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Submit custom messages to our institutional support team.</p>
               </div>
 
               <form

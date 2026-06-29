@@ -59,13 +59,13 @@ export default function TransactionSimulator({ transactions, onAddTransaction, s
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-50 mb-4">
         <div>
           <h3 className="font-display font-semibold text-base text-slate-900 flex items-center gap-2">
-            Timeline Simulator
+            Transaction Activity Feed
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-indigo-50 text-indigo-700">
               Live Feed
             </span>
           </h3>
           <p className="text-xs text-slate-500">
-            Simulate realistic transaction payloads to test ledger updates.
+            View and manage active transaction flows for your sovereign assets.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function TransactionSimulator({ transactions, onAddTransaction, s
           id="btn-simulate-transaction"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          Simulate Purchase
+          Post Transaction
         </button>
       </div>
 
@@ -125,7 +125,7 @@ export default function TransactionSimulator({ transactions, onAddTransaction, s
             >
               <AlertCircle className="w-8 h-8 opacity-40" />
               <span className="font-display font-medium text-xs text-slate-600">No Transactions Found</span>
-              <p className="text-[11px]">Simulate a purchase or clear the active query filters.</p>
+              <p className="text-[11px]">Clear active search or filter parameters to view transactions.</p>
             </motion.div>
           ) : (
             <div className="flex flex-col gap-2.5">

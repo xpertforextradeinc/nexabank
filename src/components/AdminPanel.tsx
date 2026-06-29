@@ -613,7 +613,7 @@ export default function AdminPanel({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div>
                     <h3 className="font-display font-bold text-lg">Customer Ledger Directory</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Search active sandbox clients, override compliance, and generate safety pins.</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Search active customer portfolios, override compliance parameters, and generate safety codes.</p>
                   </div>
 
                   <div className="relative w-full sm:w-72">
@@ -673,7 +673,7 @@ export default function AdminPanel({
                   })}
                   {filteredUsers.length === 0 && (
                     <div className="col-span-2 text-center py-12 text-slate-500 font-mono text-xs">
-                      NO REGISTERED CUSTOMERS FOUND IN SANDBOX INDEX
+                      NO REGISTERED CUSTOMERS FOUND IN LEDGER ARCHIVE
                     </div>
                   )}
                 </div>
@@ -821,7 +821,7 @@ export default function AdminPanel({
                   </span>
                 )}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5 font-sans">Audit and authorize inbound deposits requested by clients in the sandbox environment.</p>
+              <p className="text-xs text-slate-500 mt-0.5 font-sans">Audit and authorize inbound deposits requested by clients across institutional routes.</p>
             </div>
 
             <div className="space-y-3">
@@ -979,7 +979,7 @@ export default function AdminPanel({
               <h3 className="font-display font-bold text-lg flex items-center gap-2">
                 <Shield className="w-5 h-5 text-emerald-500" /> Compliance Audit Trail
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5 font-sans">Immutable cryptographic logs of all administrative overrides and parameters adjusted in this sandbox instance.</p>
+              <p className="text-xs text-slate-500 mt-0.5 font-sans">Immutable audit logs of all administrative actions, compliance overrides, and parameter updates.</p>
             </div>
 
             <div className="overflow-y-auto max-h-[500px] pr-1 flex flex-col gap-3">
@@ -1121,7 +1121,7 @@ export default function AdminPanel({
                 <textarea
                   required
                   rows={4}
-                  placeholder="e.g. Your verification has been successfully validated. Sandbox limits have been increased to $100,000."
+                  placeholder="e.g. Your verification has been successfully validated. Transaction thresholds have been adjusted to $100,000."
                   value={notifMessage}
                   onChange={(e) => setNotifMessage(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs focus:outline-none"
@@ -1157,7 +1157,7 @@ export default function AdminPanel({
                 {/* Global payout lock */}
                 <div className="flex justify-between items-center pb-4 border-b border-slate-100/10">
                   <div>
-                    <span className="text-xs font-semibold block">Global Sandbox Withdrawal Freeze</span>
+                    <span className="text-xs font-semibold block">Global Settlement Freeze</span>
                     <p className="text-[10px] text-slate-400 max-w-sm">When enabled, completely freezes all customer outbound payouts regardless of profile specific configurations.</p>
                   </div>
                   <button
@@ -1189,14 +1189,14 @@ export default function AdminPanel({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
                   <div>
                     <span className="text-xs font-semibold block">Regulatory Compliance Enforcement Mode</span>
-                    <p className="text-[10px] text-slate-400 max-w-sm">Set required security layers: standard sandbox verification or strict double handshakes.</p>
+                    <p className="text-[10px] text-slate-400 max-w-sm">Set required security layers: standard verification or strict multi-party authentication.</p>
                   </div>
                   <select
                     value={complianceLevel}
                     onChange={(e) => setComplianceLevel(e.target.value)}
                     className="w-full sm:w-44 p-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl text-xs font-semibold"
                   >
-                    <option value="standard">Standard Sandbox</option>
+                    <option value="standard">Standard Autopay</option>
                     <option value="double">Double Handshake</option>
                     <option value="strict">Strict KYC Required</option>
                   </select>

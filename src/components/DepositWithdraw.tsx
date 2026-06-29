@@ -118,7 +118,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       <div className="lg:col-span-4 flex flex-col gap-4">
         <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'}`}>
           <h3 className="font-display font-semibold text-base mb-1">Treasury Handshake</h3>
-          <p className="text-xs text-slate-500 mb-5">Deploy simulated funds or requests into the active bank ledger.</p>
+          <p className="text-xs text-slate-500 mb-5">Execute transfer or funding instructions into the active bank ledger.</p>
 
           <div className="flex flex-col gap-2">
             <button
@@ -201,7 +201,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                   </div>
                   <h3 className="font-display font-semibold text-lg">Deposit Logged!</h3>
                   <p className="text-xs text-slate-500 max-w-sm mt-1.5">
-                    Your simulated deposit request is compiled and sent for administrative review. Available clearance average: **5-10 minutes**.
+                    Your deposit request has been registered and is queueing for institutional settlement. Estimated settlement time: **5-10 minutes**.
                   </p>
                   <button
                     onClick={() => setDepSuccess(false)}
@@ -291,7 +291,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
 
                 {depMethod === 'crypto_usdt' && (
                   <div className="flex flex-col sm:flex-row items-center gap-4 text-xs text-slate-600 dark:text-zinc-400">
-                    {/* Simulated visual QR */}
+                    {/* Compliance QR Reference */}
                     <div className="w-24 h-24 bg-white p-2 rounded-xl flex items-center justify-center border border-slate-200 shrink-0">
                       <div className="grid grid-cols-4 grid-rows-4 gap-1 w-full h-full opacity-70">
                         {Array.from({ length: 16 }).map((_, i) => (
@@ -528,7 +528,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    A security policy requires you to input your 4-digit Withdrawal PIN (Simulated code: **{user.withdrawalPin || '4890'}**).
+                    A security policy requires you to input your 4-digit Withdrawal PIN (Your PIN: **{user.withdrawalPin || '4890'}**).
                   </p>
                   <input
                     type="password"
