@@ -23,7 +23,7 @@ import {
   Trash2,
   ChevronLeft
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthScreensProps {
   onLoginSuccess: (user: any) => void;
@@ -43,6 +43,7 @@ const COUNTRIES = [
 ];
 
 export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
+  const supabase = getSupabase();
   const [screen, setScreen] = useState<'login' | 'register' | 'forgot' | 'verify'>('login');
   
   // Login fields
@@ -141,7 +142,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
     setLoading(true);
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await getSupabase().auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -316,7 +317,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       const fullName = `${regFirstName.trim()} ${regMiddleName.trim() ? regMiddleName.trim() + ' ' : ''}${regLastName.trim()}`;
       const uniqueAcctNum = String(Math.floor(1000000000 + Math.random() * 9000000000));
       
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await getSupabase().auth.signUp({
         email: regEmail.trim(),
         password: regPassword,
         options: {
@@ -393,7 +394,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
           try {
             // Attempt to insert with full columns
-            const { error: fullProfileError } = await supabase.from('profiles').upsert(profileWithAllColumns);
+            const { error: fullProfileError } = await getSupabase().from('profiles').upsert(profileWithAllColumns);
             if (fullProfileError) throw fullProfileError;
           } catch (upsertErr) {
             console.warn("Database has not applied onboarding migrations yet. Retrying with base columns...", upsertErr);
@@ -409,12 +410,12 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
               withdrawal_pin: regPin,
               withdrawal_pin_required: true
             };
-            await supabase.from('profiles').upsert(baseProfileOnly);
+            await getSupabase().from('profiles').upsert(baseProfileOnly);
           }
 
           // Generate wallet with premium starting balance of $5,000.00
           try {
-            await supabase.from('wallets').upsert({
+            await getSupabase().from('wallets').upsert({
               user_id: data.user.id,
               main_balance: 5000.00,
               available_balance: 5000.00,
@@ -427,7 +428,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
           // Insert database welcome notification automatically
           try {
-            await supabase.from('notifications').insert({
+            await getSupabase().from('notifications').insert({
               user_id: data.user.id,
               title: 'Welcome to NexaBank Premium',
               message: `Welcome ${fullName} to your premium digital ledger for sovereign wealth. Your NexaBank account ${uniqueAcctNum} has been activated and initialized with an opening balance of $5,000.00.`,
@@ -467,7 +468,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
     setLoading(true);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/#reset-password`,
       });
       if (resetError) throw resetError;
@@ -484,7 +485,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
     try {
       setLoading(true);
       setError('');
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { error: oauthError } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin

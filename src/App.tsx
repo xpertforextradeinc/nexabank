@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, Sparkles, LogOut, Bell, Clock, Compass, HelpCircle, ChevronRight, 
@@ -13,7 +13,7 @@ import {
   WithdrawalRequest, AuditLog, BankNotification, CreditCard, SavingsGoal, Transaction 
 } from './types';
 
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { getSupabase, isSupabaseConfigured } from './lib/supabase';
 
 // Reusable components
 import AuthScreens from './components/AuthScreens';
@@ -23,6 +23,7 @@ import TransferFunds from './components/TransferFunds';
 import TransactionsHistory from './components/TransactionsHistory';
 import SettingsPanel from './components/SettingsPanel';
 import AdminPanel from './components/AdminPanel';
+import { DebugConsole } from './components/DebugConsole';
 
 // Old compatibility components used in dashboard/custom views
 import InteractiveCard from './components/InteractiveCard';
@@ -186,8 +187,18 @@ function mapNotificationFromDB(db: any): BankNotification {
 }
 
 export default function App() {
-    // Session authentication states
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  
+  // Initialize supabase instance safely
+  const supabase = useMemo(() => {
+    try {
+      return getSupabase();
+    } catch (e) {
+      console.error("App: Supabase initialization failed", e);
+      return null;
+    }
+  }, []);
+
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -251,16 +262,73 @@ export default function App() {
   const loadUserData = async (userId: string, role: 'user' | 'admin') => {
     if (!isSupabaseConfigured()) return;
     try {
+      console.log(`Loading data for user: ${userId}, role: ${role}`);
+      
       // 1. Fetch authenticated user profile
-      const rawProfile = await fetchProfileWithRetry(userId);
+      let rawProfile = await fetchProfileWithRetry(userId);
+      
       if (!rawProfile) {
+        console.warn("Profile not found in database. Attempting auto-provisioning from metadata...");
+        
+        // AUTO-PROVISIONING logic for email-confirmed users who missed initial creation
+        try {
+          const { data: authUserRes } = await getSupabase().auth.getUser();
+          const user = authUserRes?.user;
+          
+          if (user) {
+            const meta = user.user_metadata || {};
+            const fullName = meta.full_name || user.email?.split('@')[0] || 'NexaBank Customer';
+            const uniqueAcctNum = meta.account_number || String(Math.floor(1000000000 + Math.random() * 9000000000));
+            
+            console.log("Provisioning new profile for:", fullName);
+            
+            const newProfile = {
+              id: user.id,
+              name: fullName,
+              email: user.email,
+              role: 'user',
+              status: 'active',
+              verification_status: 'verified',
+              account_number: uniqueAcctNum,
+              routing_number: '021000021'
+            };
+            
+            const { data: createdProfile, error: createError } = await supabase
+              .from('profiles')
+              .upsert(newProfile)
+              .select('*')
+              .single();
+              
+            if (createError) throw createError;
+            rawProfile = createdProfile;
+            
+            // Also provision wallet
+            console.log("Provisioning wallet for:", fullName);
+            await supabase.from('wallets').upsert({
+              user_id: user.id,
+              main_balance: 5000.00,
+              available_balance: 5000.00,
+              pending_balance: 0.00,
+              savings_balance: 0.00
+            });
+            
+            triggerToast("Your NexaBank ledger has been successfully provisioned.");
+          }
+        } catch (provisionErr) {
+          console.error("Auto-provisioning failed:", provisionErr);
+        }
+      }
+
+      if (!rawProfile) {
+        console.error("Critical: Profile still missing after provisioning attempt.");
         throw new Error('Your custom profile does not exist in the ledger yet.');
       }
+      
       const mappedProfile = mapProfileFromDB(rawProfile);
 
       // Fetch auth user metadata for resilient merge fallback
       try {
-        const { data: authUserRes } = await supabase.auth.getUser();
+        const { data: authUserRes } = await getSupabase().auth.getUser();
         const meta = authUserRes?.user?.user_metadata || {};
         
         // Merge onboarding fields if database columns are missing or null
@@ -295,7 +363,7 @@ export default function App() {
 
       // Access Control Guard
       if (mappedProfile.status === 'suspended') {
-        supabase.auth.signOut();
+        getSupabase().auth.signOut();
         setCurrentUser(null);
         triggerToast('This NexaBank account has been suspended by administration compliance.');
         return;
@@ -354,8 +422,22 @@ export default function App() {
 
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Checking session status...");
+        
+        // Log URL info for debugging email confirmations
+        console.log("Current URL Hash:", window.location.hash ? "Present (Hidden for security)" : "None");
+        console.log("Current Pathname:", window.location.pathname);
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          setCurrentUser(null);
+          return;
+        }
+
         if (session?.user) {
+          console.log("Session found for user:", session.user.id);
           const rawProfile = await fetchProfileWithRetry(session.user.id);
           const mappedRole = rawProfile?.role || 'user';
           
@@ -386,6 +468,7 @@ export default function App() {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change event detected:", event, session?.user?.id || 'No User');
       try {
         if (session?.user) {
           const rawProfile = await fetchProfileWithRetry(session.user.id);
@@ -1058,6 +1141,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DebugConsole />
 
       {/* RENDER LOGIN / REGISTRATION GATE */}
       {!currentUser ? (

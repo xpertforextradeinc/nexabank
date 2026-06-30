@@ -7,6 +7,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Diagnostic check to see if React actually mounts
+      setTimeout(() => {
+        const root = document.getElementById('root');
+        if (root && root.innerHTML === '') {
+          root.innerHTML = '<div style="background:#000;color:#fff;padding:20px;font-family:sans-serif;"><h1>System Error</h1><p>The application script failed to initialize. This usually means a network error or a broken JavaScript bundle.</p><button onclick="location.reload()">Reload Page</button></div>';
+        }
+      }, 5000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

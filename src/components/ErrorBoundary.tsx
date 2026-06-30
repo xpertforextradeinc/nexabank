@@ -1,6 +1,6 @@
 import React, { ErrorInfo, ReactNode } from 'react';
 import { RefreshCcw, LogOut, Terminal, HelpCircle, ShieldAlert } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 
 interface Props {
   children: ReactNode;
@@ -38,7 +38,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   private handleResetSession = async () => {
     try {
-      await supabase.auth.signOut();
+      await getSupabase().auth.signOut();
       localStorage.clear();
       sessionStorage.clear();
       window.location.href = window.location.origin;

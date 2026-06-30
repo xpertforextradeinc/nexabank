@@ -7,7 +7,7 @@ import {
   Plus, Send, Activity, ShieldAlert
 } from 'lucide-react';
 import { UserProfile, Wallet, DepositRequest, WithdrawalRequest, AuditLog, BankTransaction } from '../types';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 
 interface AdminPanelProps {
   adminUser: UserProfile;
@@ -48,6 +48,7 @@ export default function AdminPanel({
   selectedUser,
   onSelectUser
 }: AdminPanelProps) {
+  const supabase = getSupabase();
   // Local UI States
   const [searchQuery, setSearchQuery] = useState('');
   const [adjustAmount, setAdjustAmount] = useState('');
@@ -169,7 +170,7 @@ export default function AdminPanel({
       onSelectUser({ ...selectedUser, withdrawalPin: newPin });
     }
     // Record audit log directly
-    supabase.from('audit_logs').insert({
+    getSupabase().from('audit_logs').insert({
       actor_id: adminUser.id,
       actor_name: adminUser.name,
       action: 'Generate Withdrawal PIN',
@@ -186,7 +187,7 @@ export default function AdminPanel({
       onSelectUser({ ...selectedUser, withdrawalPin: '0000' });
     }
     // Record audit log directly
-    supabase.from('audit_logs').insert({
+    getSupabase().from('audit_logs').insert({
       actor_id: adminUser.id,
       actor_name: adminUser.name,
       action: 'Reset PIN',
@@ -239,7 +240,7 @@ export default function AdminPanel({
           read: false
         }));
 
-        const { error } = await supabase.from('notifications').insert(inserts);
+        const { error } = await getSupabase().from('notifications').insert(inserts);
         if (error) throw error;
 
         // Log audit
@@ -257,7 +258,7 @@ export default function AdminPanel({
         const targetUser = usersList.find(u => u.id === notifTargetUserId);
         if (!targetUser) return;
 
-        const { error } = await supabase.from('notifications').insert({
+        const { error } = await getSupabase().from('notifications').insert({
           user_id: targetUser.id,
           title: notifTitle,
           message: notifMessage,

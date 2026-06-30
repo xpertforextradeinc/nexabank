@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 declare global {
   interface ImportMeta {
@@ -35,16 +35,35 @@ export const getSupabaseAnonKey = (): string => {
   return 'placeholder-anon-key';
 };
 
-const supabaseUrl = getSupabaseUrl();
-const supabaseAnonKey = getSupabaseAnonKey();
+let supabaseClient: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const getSupabase = (): SupabaseClient => {
+  try {
+    if (!supabaseClient) {
+      const supabaseUrl = getSupabaseUrl();
+      const supabaseAnonKey = getSupabaseAnonKey();
+
+      console.log("Initializing Supabase client with URL:", supabaseUrl?.substring(0, 15) + "...");
+
+      if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'placeholder-url') {
+        throw new Error('Supabase configuration is incomplete.');
+      }
+
+      supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+    }
+    return supabaseClient;
+  } catch (error) {
+    console.error("CRITICAL: Failed to initialize Supabase client:", error);
+    // Return a dummy client or let the guard handle it
+    throw error;
+  }
+};
 
 export const isSupabaseConfigured = (): boolean => {
   const url = getSupabaseUrl();
