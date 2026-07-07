@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 import { 
   Shield, Sparkles, LogOut, Bell, Clock, Compass, HelpCircle, ChevronRight, 
   RefreshCw, BarChart3, TrendingUp, Settings, History, Send, ArrowUpRight, 
@@ -1273,6 +1274,7 @@ export default function App() {
         </div>
       )}
 
+      <Analytics />
     </div>
   );
 
