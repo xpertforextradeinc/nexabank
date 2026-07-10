@@ -1,13 +1,13 @@
 import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { getSupabase } from '../lib/supabase';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface AuthScreensProps {
-  onLoginSuccess: (user: any) => void;
+  onLoginSuccess?: (user: any) => void;
 }
 
-export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
+export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   const [screen, setScreen] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +21,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
     setError('');
     
     try {
-      const { data, error: signInError } = await getSupabase().auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -31,6 +31,24 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       }
     } catch (err: any) {
       setError(err.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (oauthError) throw oauthError;
+    } catch (err: any) {
+      setError(err.message || 'Google OAuth failed.');
     } finally {
       setLoading(false);
     }
@@ -99,6 +117,24 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                 </button>
               </div>
               <button type="submit" disabled={loading} className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all active:scale-[0.98]">{loading ? '...' : 'LOGIN'}</button>
+              
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-zinc-800"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with</span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={handleGoogleSignIn} 
+                className="w-full py-3 bg-white hover:bg-zinc-200 text-zinc-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                disabled={loading}
+              >
+                <Chrome className="w-4 h-4" />
+                Google
+              </button>
             </motion.form>
           )}
           {screen === 'register' && (
