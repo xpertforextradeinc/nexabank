@@ -86,7 +86,34 @@ export default function DashboardOverview({ user, wallet, transactions, onNaviga
   const totalSpent = finalSpendData.reduce((sum, d) => sum + d.amount, 0);
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <motion.div 
+      className="flex flex-col gap-8 w-full relative"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      {/* Subtle background animation */}
+      <motion.div
+        className="absolute -inset-20 -z-10 opacity-20 blur-3xl"
+        animate={{
+          background: isDarkMode
+            ? [
+                "radial-gradient(circle at 30% 20%, #4f46e5, transparent)",
+                "radial-gradient(circle at 70% 80%, #4f46e5, transparent)",
+                "radial-gradient(circle at 30% 20%, #4f46e5, transparent)",
+              ]
+            : [
+                "radial-gradient(circle at 30% 20%, #e0e7ff, transparent)",
+                "radial-gradient(circle at 70% 80%, #e0e7ff, transparent)",
+                "radial-gradient(circle at 30% 20%, #e0e7ff, transparent)",
+              ],
+        }}
+        transition={{
+          duration: 40,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+      />
+
       {/* Upper Cards: Real-time Balance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1: Main Balance */}
@@ -543,6 +570,6 @@ export default function DashboardOverview({ user, wallet, transactions, onNaviga
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

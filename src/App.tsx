@@ -1166,6 +1166,7 @@ export default function App() {
       {!currentUser ? (
         <AuthScreens onLoginSuccess={(user) => {
           console.log("AuthScreens: onLoginSuccess called with", user);
+          setCurrentTab('dashboard');
           loadUserData(user.id, 'user');
         }} />
       ) : (
