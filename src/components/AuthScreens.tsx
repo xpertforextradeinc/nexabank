@@ -138,15 +138,40 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             </motion.form>
           )}
           {screen === 'register' && (
-            <motion.div 
+            <motion.form 
               key="register"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                try {
+                  const { error } = await supabase.auth.signUp({ email, password });
+                  if (error) throw error;
+                  alert('Check your email for the confirmation link.');
+                } catch (err: any) {
+                  setError(err.message || 'Registration failed.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="text-zinc-400 text-center py-8"
+              className="space-y-4"
             >
-              Registration is currently in maintenance. Please contact support.
-            </motion.div>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 pl-10 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:ring-1.5 focus:ring-emerald-500/50 transition-all" required />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 pl-10 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:ring-1.5 focus:ring-emerald-500/50 transition-all" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-zinc-500">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button type="submit" disabled={loading} className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all active:scale-[0.98]">{loading ? '...' : 'REGISTER'}</button>
+            </motion.form>
           )}
         </AnimatePresence>
       </motion.div>
