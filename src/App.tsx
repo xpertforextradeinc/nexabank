@@ -24,6 +24,7 @@ import TransactionsHistory from './components/TransactionsHistory';
 import SettingsPanel from './components/SettingsPanel';
 import AdminPanel from './components/AdminPanel';
 import { DebugConsole } from './components/DebugConsole';
+import Services from './components/Services';
 
 // Old compatibility components used in dashboard/custom views
 import InteractiveCard from './components/InteractiveCard';
@@ -230,6 +231,18 @@ export default function App() {
 
   // UTC clock ticker
   useEffect(() => {
+    const checkSession = async () => {
+      console.log("Checking session on mount...");
+      const { data } = await getSupabase().auth.getSession();
+      console.log("Session check result:", data);
+      if (data.session?.user) {
+        console.log("Session found, loading user data...");
+        loadUserData(data.session.user.id, 'user');
+      }
+      setLoading(false);
+    };
+    checkSession();
+
     const ticker = setInterval(() => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' }) + ' UTC');
@@ -260,13 +273,18 @@ export default function App() {
 
   // Core data loaders mapping to role
   const loadUserData = async (userId: string, role: 'user' | 'admin') => {
-    if (!isSupabaseConfigured()) return;
+    console.log("loadUserData called for", userId, role);
+    if (!isSupabaseConfigured()) {
+      console.error("Supabase not configured");
+      return;
+    }
     try {
       console.log(`Loading data for user: ${userId}, role: ${role}`);
       
       // 1. Fetch authenticated user profile
       let rawProfile = await fetchProfileWithRetry(userId);
-      
+      console.log("Raw profile fetched:", rawProfile);
+
       if (!rawProfile) {
         console.warn("Profile not found in database. Attempting auto-provisioning from metadata...");
         
@@ -1146,7 +1164,10 @@ export default function App() {
 
       {/* RENDER LOGIN / REGISTRATION GATE */}
       {!currentUser ? (
-        <AuthScreens onLoginSuccess={() => {}} />
+        <AuthScreens onLoginSuccess={(user) => {
+          console.log("AuthScreens: onLoginSuccess called with", user);
+          loadUserData(user.id, 'user');
+        }} />
       ) : (
         <div className="flex-1 flex flex-col lg:flex-row relative min-h-screen">
           
@@ -1288,6 +1309,7 @@ export default function App() {
       { id: 'deposit', label: 'Deposit', icon: ArrowUpRight },
       { id: 'withdraw', label: 'Withdraw', icon: ArrowDownRight },
       { id: 'transfer', label: 'Transfer', icon: Send },
+      { id: 'services', label: 'Services', icon: Sparkles },
       { id: 'transactions', label: 'Transactions', icon: History },
       { id: 'cards', label: 'Cards', icon: CardIcon },
       { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined },
@@ -1688,6 +1710,9 @@ export default function App() {
             isDarkMode={isDarkMode}
           />
         ) : null;
+
+      case 'services':
+        return <Services isDarkMode={isDarkMode} />;
 
       case 'transactions':
         return (
