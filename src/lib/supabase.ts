@@ -64,7 +64,6 @@ export const getSupabase = (): SupabaseClient => {
     throw error;
   }
 };
-export const supabase = getSupabase();
 
 export const isSupabaseConfigured = (): boolean => {
   const url = getSupabaseUrl();
