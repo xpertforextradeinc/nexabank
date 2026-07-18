@@ -1628,6 +1628,7 @@ export default function App() {
           onRequireDepositWithdrawal={handleRequireDepositWithdrawal}
           onUpdateUserDetails={handleUpdateUserDetails}
           onAdjustWalletBalance={handleAdjustWalletBalance}
+          onRefresh={() => loadUserData(currentUser.id, currentUser.role)}
           isDarkMode={isDarkMode}
           activeSubTab={currentTab}
           selectedUser={selectedAdminUser}

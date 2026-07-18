@@ -24,6 +24,7 @@ interface AdminPanelProps {
   onRequireDepositWithdrawal?: (reqId: string, amount: number) => void;
   onUpdateUserDetails: (userId: string, updates: Partial<UserProfile>) => void;
   onAdjustWalletBalance: (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number) => void;
+  onRefresh: () => void;
   isDarkMode: boolean;
   activeSubTab: string;
   selectedUser: UserProfile | null;
@@ -45,6 +46,7 @@ export default function AdminPanel({
   onRequireDepositWithdrawal,
   onUpdateUserDetails,
   onAdjustWalletBalance,
+  onRefresh,
   isDarkMode,
   activeSubTab,
   selectedUser,
@@ -445,6 +447,9 @@ export default function AdminPanel({
                   <span className="text-[10px] uppercase font-mono text-slate-400 block font-semibold">Active Customers</span>
                   <span className="text-xl font-bold font-mono text-slate-800 dark:text-white">{totalUsers}</span>
                 </div>
+                <button onClick={onRefresh} className="ml-auto p-2 hover:bg-indigo-500/10 rounded-full text-slate-400 hover:text-indigo-500 transition-colors">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
 
               <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} flex items-center gap-4`}>

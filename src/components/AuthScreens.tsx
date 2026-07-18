@@ -367,7 +367,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             email: regEmail.trim().toLowerCase(),
             role: 'user',
             status: 'active',
-            verification_status: 'verified', // Instant compliance check and automated verification
+            verification_status: 'pending', // Pending compliance review
             phone: regPhone.trim(),
             withdrawal_pin: regPin,
             withdrawal_pin_required: true,
@@ -405,7 +405,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
               email: regEmail.trim().toLowerCase(),
               role: 'user',
               status: 'active',
-              verification_status: 'verified',
+              verification_status: 'pending',
               phone: regPhone.trim(),
               withdrawal_pin: regPin,
               withdrawal_pin_required: true
