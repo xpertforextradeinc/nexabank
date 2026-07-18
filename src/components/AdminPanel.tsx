@@ -334,10 +334,92 @@ export default function AdminPanel({
     setTimeout(() => setSettingsSuccess(''), 4000);
   };
 
+
+  // Helper to handle Approve/Reject
+  const handleRequestDecision = async (decision: 'approve' | 'reject') => {
+    if (!selectedRequest) return;
+    
+    const supabase = getSupabase();
+    const user = selectedRequest.user;
+    
+    if (decision === 'approve') {
+        if (selectedRequest.id.startsWith('kyc-')) {
+            await onUpdateUserDetails(user.id, { verificationStatus: 'verified' });
+            await supabase.from('audit_logs').insert({
+                actor_id: adminUser.id,
+                actor_name: adminUser.name,
+                action: 'Approve KYC',
+                target_user_id: user.id,
+                target_user_name: user.name,
+                details: 'KYC identity verification approved by admin.'
+            });
+        } else if (selectedRequest.id.startsWith('tax-')) {
+            const tax = JSON.parse(user.sourceFunds);
+            tax.taxFilingStatus = 'approved';
+            await onUpdateUserDetails(user.id, { sourceFunds: JSON.stringify(tax) });
+            await supabase.from('audit_logs').insert({
+                actor_id: adminUser.id,
+                actor_name: adminUser.name,
+                action: 'Approve Tax Filing',
+                target_user_id: user.id,
+                target_user_name: user.name,
+                details: 'Tax filing approved by admin.'
+            });
+        }
+    } else {
+         if (selectedRequest.id.startsWith('kyc-')) {
+            await onUpdateUserDetails(user.id, { verificationStatus: 'unverified' });
+             await supabase.from('audit_logs').insert({
+                actor_id: adminUser.id,
+                actor_name: adminUser.name,
+                action: 'Reject KYC',
+                target_user_id: user.id,
+                target_user_name: user.name,
+                details: 'KYC identity verification rejected by admin.'
+            });
+        } else if (selectedRequest.id.startsWith('tax-')) {
+             const tax = JSON.parse(user.sourceFunds);
+            tax.taxFilingStatus = 'rejected';
+            await onUpdateUserDetails(user.id, { sourceFunds: JSON.stringify(tax) });
+            await supabase.from('audit_logs').insert({
+                actor_id: adminUser.id,
+                actor_name: adminUser.name,
+                action: 'Reject Tax Filing',
+                target_user_id: user.id,
+                target_user_name: user.name,
+                details: 'Tax filing rejected by admin.'
+            });
+        }
+    }
+    setSelectedRequest(null);
+    alert('Decision submitted!');
+  };
+
   return (
     <div className="w-full text-left font-sans">
+      <AnimatePresence>
+        {selectedRequest && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-2xl text-left">
+                    <h3 className="font-bold text-lg mb-4">{selectedRequest.type} Review</h3>
+                    {selectedRequest.id.startsWith('kyc-') && (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                           {/* Side-by-side ID Images - Using mock URLs as identified in KYCWizard */}
+                            <img src="https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&q=80&w=600" alt="Front ID" className="rounded-xl w-full h-48 object-cover" />
+                            <img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=600" alt="Back ID" className="rounded-xl w-full h-48 object-cover" />
+                        </div>
+                    )}
+                    <p className="text-sm mb-6">Reviewing {selectedRequest.user.name}'s submission.</p>
+                    <div className="flex gap-4 justify-end">
+                        <button onClick={() => handleRequestDecision('reject')} className="px-4 py-2 bg-rose-500 text-white rounded-xl">Reject</button>
+                        <button onClick={() => handleRequestDecision('approve')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl">Approve</button>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
-        
+
         {/* TAB 1: ADMIN DASHBOARD OVERVIEW */}
         {activeSubTab === 'dashboard' && (
           <motion.div
