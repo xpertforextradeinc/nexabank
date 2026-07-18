@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  ArrowUpRight, ArrowDownRight, ArrowRight, Shield, QrCode, Clipboard, Check, Sparkles, AlertCircle, CheckCircle2, DollarSign, Loader2, Key, HelpCircle, ChevronRight 
+  ArrowUpRight, ArrowDownRight, ArrowRight, Shield, QrCode, Clipboard, Check, Sparkles, AlertCircle, CheckCircle2, DollarSign, Loader2, Key, HelpCircle, ChevronRight, Wallet as WalletIcon 
 } from 'lucide-react';
 import { UserProfile, Wallet, DepositRequest, WithdrawalRequest } from '../types';
 
@@ -9,7 +9,7 @@ interface DepositWithdrawProps {
   user: UserProfile;
   wallet: Wallet;
   onAddDeposit: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'credit_card') => void;
-  onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt', pin?: string) => string | null | Promise<string | null>; // returns error message if any
+  onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo', pin?: string, payload?: any) => string | null | Promise<string | null>; // returns error message if any
   isDarkMode: boolean;
 }
 
@@ -24,7 +24,21 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
 
   // Withdrawal States
   const [wthAmount, setWthAmount] = useState('');
-  const [wthMethod, setWthMethod] = useState<'bank_wire' | 'crypto_usdt'>('bank_wire');
+  const [wthMethod, setWthMethod] = useState<'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo'>('bank_wire');
+  
+  // Custom Method Payloads
+  const [bankRouting, setBankRouting] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [bankName, setBankName] = useState('');
+  
+  const [cashAppTag, setCashAppTag] = useState('');
+  const [cashAppPhone, setCashAppPhone] = useState('');
+  
+  const [zelleEmail, setZelleEmail] = useState('');
+  const [zellePhone, setZellePhone] = useState('');
+  
+  const [venmoUsername, setVenmoUsername] = useState('');
+
   const [enteredPin, setEnteredPin] = useState('');
   const [wthSuccess, setWthSuccess] = useState(false);
   
@@ -33,7 +47,8 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
   const [loading, setLoading] = useState(false);
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText('0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1');
+    const addressToCopy = user.assignedCryptoWallet || '0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1';
+    navigator.clipboard.writeText(addressToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -97,7 +112,19 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
 
     setLoading(true);
     setTimeout(async () => {
-      const result = onAddWithdrawal(amt, wthMethod, enteredPin);
+      
+      let payload = {};
+      if (wthMethod === 'bank_wire') {
+        payload = { bankRouting, bankAccount, bankName };
+      } else if (wthMethod === 'cash_app') {
+        payload = { cashAppTag, cashAppPhone };
+      } else if (wthMethod === 'zelle') {
+        payload = { zelleEmail, zellePhone };
+      } else if (wthMethod === 'venmo') {
+        payload = { venmoUsername };
+      }
+      
+      const result = onAddWithdrawal(amt, wthMethod, enteredPin, payload);
       const wthError = result instanceof Promise ? await result : result;
       setLoading(false);
       if (wthError) {
@@ -107,6 +134,14 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       setWthSuccess(true);
       setWthAmount('');
       setEnteredPin('');
+      setBankRouting('');
+      setBankAccount('');
+      setBankName('');
+      setCashAppTag('');
+      setCashAppPhone('');
+      setZelleEmail('');
+      setZellePhone('');
+      setVenmoUsername('');
       setTimeout(() => setWthSuccess(false), 5000);
     }, 1800);
   };
@@ -306,7 +341,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                       <p className="text-[11px]">Deploy matching USD amounts to the designated stable wallet below.</p>
                       <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
                         <span className="font-mono text-[10px] text-slate-500 dark:text-zinc-300 truncate flex-1">
-                          0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1
+                          {user.assignedCryptoWallet || '0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1'}
                         </span>
                         <button
                           type="button"
@@ -456,18 +491,18 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                 <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-3">
                   1. CHOOSE PAYOUT DESTINATION
                 </span>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   <button
                     type="button"
                     onClick={() => setWthMethod('bank_wire')}
                     className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
                       wthMethod === 'bank_wire'
                         ? 'border-indigo-500 bg-indigo-50/10 text-indigo-600 font-semibold'
-                        : 'border-slate-100 hover:border-slate-200 text-slate-600 bg-transparent'
+                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
                     }`}
                   >
                     <ArrowDownRight className="w-5 h-5 text-indigo-500" />
-                    <span className="text-[10px]">Wire Transfer IBAN</span>
+                    <span className="text-[9px]">Wire IBAN</span>
                   </button>
                   <button
                     type="button"
@@ -475,26 +510,107 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                     className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
                       wthMethod === 'crypto_usdt'
                         ? 'border-emerald-500 bg-emerald-50/10 text-emerald-600 font-semibold'
-                        : 'border-slate-100 hover:border-slate-200 text-slate-600 bg-transparent'
+                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
                     }`}
                   >
                     <QrCode className="w-5 h-5 text-emerald-500" />
-                    <span className="text-[10px]">USDT (TRC-20 Stable)</span>
+                    <span className="text-[9px]">Crypto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWthMethod('cash_app')}
+                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
+                      wthMethod === 'cash_app'
+                        ? 'border-green-500 bg-green-50/10 text-green-600 font-semibold'
+                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
+                    }`}
+                  >
+                    <DollarSign className="w-5 h-5 text-green-500" />
+                    <span className="text-[9px]">Cash App</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWthMethod('zelle')}
+                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
+                      wthMethod === 'zelle'
+                        ? 'border-purple-500 bg-purple-50/10 text-purple-600 font-semibold'
+                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
+                    }`}
+                  >
+                    <ArrowUpRight className="w-5 h-5 text-purple-500" />
+                    <span className="text-[9px]">Zelle</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWthMethod('venmo')}
+                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
+                      wthMethod === 'venmo'
+                        ? 'border-blue-500 bg-blue-50/10 text-blue-600 font-semibold'
+                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
+                    }`}
+                  >
+                    <WalletIcon className="w-5 h-5 text-blue-500" />
+                    <span className="text-[9px]">Venmo</span>
                   </button>
                 </div>
               </div>
 
               {/* Destination Account Details */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
-                  {wthMethod === 'bank_wire' ? 'ENTER DESTINATION IBAN CODE' : 'ENTER EXTERNAL CRYPTO WALLET'}
-                </label>
-                <input
-                  type="text"
-                  placeholder={wthMethod === 'bank_wire' ? 'US89 CORE 1024 8830...' : 'TY27d...0xStableWalletDestination'}
-                  required
-                  className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 transition"
-                />
+              <div className="flex flex-col gap-3">
+                {wthMethod === 'bank_wire' && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Bank Name</label>
+                      <input type="text" value={bankName} onChange={e => setBankName(e.target.value)} required placeholder="e.g. Chase Bank" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Routing No.</label>
+                        <input type="text" value={bankRouting} onChange={e => setBankRouting(e.target.value)} required placeholder="021000021" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Account No.</label>
+                        <input type="text" value={bankAccount} onChange={e => setBankAccount(e.target.value)} required placeholder="3049204..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {wthMethod === 'crypto_usdt' && (
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">ENTER EXTERNAL CRYPTO WALLET (USDT)</label>
+                    <input type="text" placeholder="TY27d...0xStableWalletDestination" required className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                  </div>
+                )}
+                {wthMethod === 'cash_app' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">$Cashtag</label>
+                      <input type="text" value={cashAppTag} onChange={e => setCashAppTag(e.target.value)} required placeholder="$johndoe" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Phone Number</label>
+                      <input type="tel" value={cashAppPhone} onChange={e => setCashAppPhone(e.target.value)} required placeholder="+1 (555) ..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    </div>
+                  </div>
+                )}
+                {wthMethod === 'zelle' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Zelle Email</label>
+                      <input type="email" value={zelleEmail} onChange={e => setZelleEmail(e.target.value)} placeholder="email@domain.com" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Zelle Phone</label>
+                      <input type="tel" value={zellePhone} onChange={e => setZellePhone(e.target.value)} placeholder="+1 (555) ..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    </div>
+                  </div>
+                )}
+                {wthMethod === 'venmo' && (
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">@Username</label>
+                    <input type="text" value={venmoUsername} onChange={e => setVenmoUsername(e.target.value)} required placeholder="@johndoe" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                  </div>
+                )}
               </div>
 
               {/* Amount form */}

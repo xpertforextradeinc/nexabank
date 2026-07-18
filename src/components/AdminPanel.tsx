@@ -21,6 +21,7 @@ interface AdminPanelProps {
   onRejectDeposit: (reqId: string) => void;
   onApproveWithdrawal: (reqId: string) => void;
   onRejectWithdrawal: (reqId: string) => void;
+  onRequireDepositWithdrawal?: (reqId: string, amount: number) => void;
   onUpdateUserDetails: (userId: string, updates: Partial<UserProfile>) => void;
   onAdjustWalletBalance: (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number) => void;
   isDarkMode: boolean;
@@ -41,6 +42,7 @@ export default function AdminPanel({
   onRejectDeposit,
   onApproveWithdrawal,
   onRejectWithdrawal,
+  onRequireDepositWithdrawal,
   onUpdateUserDetails,
   onAdjustWalletBalance,
   isDarkMode,
@@ -60,6 +62,7 @@ export default function AdminPanel({
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editCryptoWallet, setEditCryptoWallet] = useState('');
   const [editMsg, setEditMsg] = useState('');
 
   // Broadcast Notification Fields
@@ -67,6 +70,9 @@ export default function AdminPanel({
   const [notifMessage, setNotifMessage] = useState('');
   const [notifTargetUserId, setNotifTargetUserId] = useState('all');
   const [notifSuccess, setNotifSuccess] = useState('');
+  
+  // Require Deposit Inputs
+  const [requireDepositValues, setRequireDepositValues] = useState<Record<string, string>>({});
 
   // Admin Compliance overrides
   const [globalLock, setGlobalLock] = useState(false);
@@ -97,6 +103,7 @@ export default function AdminPanel({
     setEditName(user.name);
     setEditEmail(user.email);
     setEditPhone(user.phone || '');
+    setEditCryptoWallet(user.assignedCryptoWallet || '');
     setAdjustSuccess('');
     setAdjustError('');
     setEditMsg('');
@@ -108,7 +115,8 @@ export default function AdminPanel({
     onUpdateUserDetails(selectedUser.id, {
       name: editName,
       email: editEmail,
-      phone: editPhone
+      phone: editPhone,
+      assignedCryptoWallet: editCryptoWallet
     });
     setEditMsg('User portfolio profile successfully overridden.');
     setTimeout(() => setEditMsg(''), 3000);
@@ -489,6 +497,16 @@ export default function AdminPanel({
                             value={editEmail}
                             onChange={(e) => setEditEmail(e.target.value)}
                             className="w-full mt-1 p-2 bg-slate-50 dark:bg-zinc-950 border border-slate-250 dark:border-zinc-850 rounded-xl focus:outline-none"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-[9px] uppercase font-mono text-slate-500">Assigned Crypto Deposit Wallet</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                            value={editCryptoWallet}
+                            onChange={(e) => setEditCryptoWallet(e.target.value)}
+                            className="w-full mt-1 p-2 bg-slate-50 dark:bg-zinc-950 border border-slate-250 dark:border-zinc-850 rounded-xl focus:outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -895,16 +913,40 @@ export default function AdminPanel({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">-${req.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    <div className="flex gap-1.5">
-                      <button onClick={() => onApproveWithdrawal(req.id)} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:opacity-90 transition">
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => onRejectWithdrawal(req.id)} className="p-1.5 bg-rose-500 text-white rounded-lg hover:opacity-90 transition">
-                        <X className="w-4 h-4" />
-                      </button>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">-${req.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => onApproveWithdrawal(req.id)} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:opacity-90 transition">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => onRejectWithdrawal(req.id)} className="p-1.5 bg-rose-500 text-white rounded-lg hover:opacity-90 transition">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+                    {onRequireDepositWithdrawal && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input 
+                          type="number"
+                          placeholder="$ Amount"
+                          className="w-24 px-2 py-1 text-[10px] rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                          value={requireDepositValues[req.id] || ''}
+                          onChange={(e) => setRequireDepositValues(prev => ({ ...prev, [req.id]: e.target.value }))}
+                        />
+                        <button 
+                          onClick={() => {
+                            const val = parseFloat(requireDepositValues[req.id]);
+                            if (!isNaN(val) && val > 0) {
+                              onRequireDepositWithdrawal(req.id, val);
+                            }
+                          }}
+                          className="px-2 py-1 bg-amber-500 text-white text-[10px] font-bold rounded hover:opacity-90 transition"
+                        >
+                          Require Deposit
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

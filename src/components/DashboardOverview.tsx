@@ -3,12 +3,13 @@ import { motion } from 'motion/react';
 import { 
   ArrowUpRight, ArrowDownRight, Wallet as WalletIcon, PiggyBank, Clock, TrendingUp, TrendingDown, Shield, Award, Sparkles, Check, ChevronRight, ShoppingBag, Coffee, Car, DollarSign, Video, HelpCircle, AlertTriangle 
 } from 'lucide-react';
-import { UserProfile, Wallet, BankTransaction } from '../types';
+import { UserProfile, Wallet, BankTransaction, WithdrawalRequest } from '../types';
 
 interface DashboardOverviewProps {
   user: UserProfile;
   wallet: Wallet;
   transactions: BankTransaction[];
+  withdrawals: WithdrawalRequest[];
   onNavigate: (tab: string) => void;
   isDarkMode: boolean;
 }
@@ -25,7 +26,7 @@ const CATEGORY_ICONS: Record<string, ReactNode> = {
   adjustment: <HelpCircle className="w-4 h-4 text-slate-500" />,
 };
 
-export default function DashboardOverview({ user, wallet, transactions, onNavigate, isDarkMode }: DashboardOverviewProps) {
+export default function DashboardOverview({ user, wallet, transactions, withdrawals, onNavigate, isDarkMode }: DashboardOverviewProps) {
   const [activeRange, setActiveRange] = useState<'7d' | '30d'>('7d');
   const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
 
@@ -84,9 +85,34 @@ export default function DashboardOverview({ user, wallet, transactions, onNaviga
       ];
 
   const totalSpent = finalSpendData.reduce((sum, d) => sum + d.amount, 0);
+  
+  // Check for deposit required withdrawals
+  const depositRequiredWithdrawal = withdrawals.find(w => w.status === 'deposit_required');
 
   return (
     <div className="flex flex-col gap-8 w-full">
+      {depositRequiredWithdrawal && depositRequiredWithdrawal.requiredDepositAmount && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between animate-pulse">
+          <div className="flex gap-3">
+            <div className="p-2 rounded-full bg-amber-500/20 text-amber-500 shrink-0 h-fit mt-0.5 sm:mt-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-amber-600 dark:text-amber-500 text-sm sm:text-base">Your withdrawal is on hold</h3>
+              <p className="text-amber-700/80 dark:text-amber-400/80 text-xs sm:text-sm mt-0.5 font-medium max-w-xl">
+                Please deposit <span className="font-mono font-bold">${depositRequiredWithdrawal.requiredDepositAmount.toLocaleString()}</span> to your wallet to clear this transaction (Ref: {depositRequiredWithdrawal.reference.split('|')[0]}).
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => onNavigate('deposit')}
+            className="shrink-0 px-4 py-2 bg-amber-500 text-white font-bold rounded-xl text-xs sm:text-sm hover:bg-amber-600 transition shadow-sm w-full sm:w-auto"
+          >
+            Deposit Now
+          </button>
+        </div>
+      )}
+
       {/* Upper Cards: Real-time Balance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1: Main Balance */}

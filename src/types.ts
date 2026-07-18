@@ -38,6 +38,16 @@ export interface UserProfile {
   // Generated Core Banking Numbers
   accountNumber?: string;
   routingNumber?: string;
+  
+  // Tax Filing Info
+  taxLegalName?: string;
+  taxDob?: string;
+  taxFilingStatus?: string;
+  taxAddress?: string;
+  taxSubmitted?: boolean;
+  
+  // Admin Assigned Crypto Wallet
+  assignedCryptoWallet?: string;
 }
 
 export interface Wallet {
@@ -76,10 +86,12 @@ export interface WithdrawalRequest {
   userId: string;
   userName: string;
   amount: number;
-  method: 'bank_wire' | 'crypto_usdt';
-  status: 'pending' | 'approved' | 'rejected';
+  method: 'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo';
+  status: 'pending' | 'approved' | 'rejected' | 'deposit_required';
   date: string;
   reference: string;
+  payload?: any;
+  requiredDepositAmount?: number;
 }
 
 export interface AuditLog {

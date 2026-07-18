@@ -413,12 +413,12 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             await getSupabase().from('profiles').upsert(baseProfileOnly);
           }
 
-          // Generate wallet with premium starting balance of $5,000.00
+          // Generate wallet with starting balance of $0.00
           try {
             await getSupabase().from('wallets').upsert({
               user_id: data.user.id,
-              main_balance: 5000.00,
-              available_balance: 5000.00,
+              main_balance: 0.00,
+              available_balance: 0.00,
               pending_balance: 0.00,
               savings_balance: 0.00
             });
@@ -431,7 +431,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             await getSupabase().from('notifications').insert({
               user_id: data.user.id,
               title: 'Welcome to NexaBank Premium',
-              message: `Welcome ${fullName} to your premium digital ledger for sovereign wealth. Your NexaBank account ${uniqueAcctNum} has been activated and initialized with an opening balance of $5,000.00.`,
+              message: `Welcome ${fullName} to your premium digital ledger for sovereign wealth. Your NexaBank account ${uniqueAcctNum} has been activated and initialized.`,
               read: false
             });
           } catch (nErr) {
