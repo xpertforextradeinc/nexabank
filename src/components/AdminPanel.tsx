@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, UserCheck, Shield, ClipboardList, Sparkles, Check, X, AlertTriangle, 
@@ -79,6 +79,27 @@ export default function AdminPanel({
   const [maxTransferLimit, setMaxTransferLimit] = useState('50000');
   const [complianceLevel, setComplianceLevel] = useState('standard');
   const [settingsSuccess, setSettingsSuccess] = useState('');
+
+  // Live Notification Feed
+  const [liveEvents, setLiveEvents] = useState<{id: string, text: string, time: string}[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+
+  useEffect(() => {
+    const channel = supabase.channel('admin_live_feed')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
+        const newProfile = payload.new as any;
+        setLiveEvents(prev => [{
+          id: Date.now().toString(),
+          text: `NEW REGISTRATION: ${newProfile.name || newProfile.email} just created an account.`,
+          time: new Date().toLocaleTimeString()
+        }, ...prev].slice(0, 10));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   // Calculations for Admin Dashboard Overview
   const totalUsers = usersList.filter(u => u.role !== 'admin').length;
@@ -442,6 +463,166 @@ export default function AdminPanel({
                   )}
                 </div>
               </div>
+
+              {/* Live Real-time Registration Feed (12 columns) */}
+              <div className={`lg:col-span-12 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} space-y-4`}>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100/10">
+                  <h3 className="font-display font-semibold text-xs flex items-center gap-1.5">
+                    <Activity className="w-4 h-4 text-rose-500 animate-pulse" /> Live Registration Feed
+                  </h3>
+                  <span className="text-[9px] font-mono text-slate-400 uppercase">Real-Time Stream</span>
+                </div>
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {liveEvents.length > 0 ? liveEvents.map(evt => (
+                    <div key={evt.id} className="flex gap-3 text-left items-center p-3 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-850">
+                      <div className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-800 dark:text-zinc-200 font-medium">{evt.text}</p>
+                        <span className="text-[9px] font-mono text-slate-400">{evt.time}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-center py-8 text-slate-500 font-mono text-[10px]">WAITING FOR NEW REGISTRATIONS...</p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB: INBOUND COMPLIANCE QUEUE */}
+        {activeSubTab === 'inbound_requests' && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6 text-left"
+          >
+            <div>
+              <span className="text-indigo-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Compliance & Auditing Division</span>
+              <h2 className="text-2xl font-display font-bold text-slate-900 dark:text-white">Inbound Compliance Queue</h2>
+              <p className="text-xs text-slate-500 mt-1 font-sans">
+                Unified real-time ledger of all incoming Sovereign KYC verifications and annual tax filings awaiting compliance team review.
+              </p>
+            </div>
+
+            <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} text-left space-y-6`}>
+              <div className="flex items-center justify-between border-b border-slate-100/10 pb-4">
+                <h3 className="font-display font-bold text-lg">Pending Inbound Submissions</h3>
+                <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full font-mono text-[10px] font-bold animate-pulse">
+                  ● AUDIT QUEUE ACTIVE
+                </span>
+              </div>
+
+              {/* Table List of Inbound Requests */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-sans">
+                  <thead>
+                    <tr className="border-b border-slate-150 dark:border-zinc-800 text-slate-400 font-mono text-[9px] uppercase font-bold text-left">
+                      <th className="pb-3 font-semibold">User details</th>
+                      <th className="pb-3 font-semibold">Submission type</th>
+                      <th className="pb-3 font-semibold">Date submitted</th>
+                      <th className="pb-3 font-semibold">Compliance level</th>
+                      <th className="pb-3 font-semibold text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const list: any[] = [];
+                      usersList.forEach(u => {
+                        if (u.verificationStatus === 'pending') {
+                          let subDate = u.joinedDate || new Date().toISOString();
+                          try {
+                            if (u.uploadedIdUrl) {
+                              const kyc = JSON.parse(u.uploadedIdUrl);
+                              if (kyc && kyc.submittedAt) {
+                                subDate = kyc.submittedAt;
+                              }
+                            }
+                          } catch(e) {}
+                          list.push({
+                            id: `kyc-${u.id}`,
+                            userId: u.id,
+                            user: u,
+                            type: 'Sovereign KYC ID Verification',
+                            submittedAt: subDate,
+                            status: 'Pending'
+                          });
+                        }
+                        if (u.sourceFunds) {
+                          try {
+                            const tax = JSON.parse(u.sourceFunds);
+                            if (tax && tax.taxFilingStatus === 'pending') {
+                              list.push({
+                                id: `tax-${u.id}`,
+                                userId: u.id,
+                                user: u,
+                                type: 'Annual Tax Filing & Limit Upgrade',
+                                submittedAt: tax.submittedAt || new Date().toISOString(),
+                                status: 'Pending'
+                              });
+                            }
+                          } catch (e) {
+                            // ignore parsing error
+                          }
+                        }
+                      });
+
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-slate-400 font-mono text-xs border border-dashed border-slate-150 dark:border-zinc-850 rounded-2xl">
+                              NO PENDING INBOUND COMPLIANCE SUBMISSIONS LOGGED
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      // Sort by submittedAt chronologically
+                      list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+                      return list.map(req => (
+                        <tr key={req.id} className="border-b border-slate-100/10 hover:bg-slate-50/5 transition">
+                          <td className="py-4 flex items-center gap-3">
+                            <img
+                              src={req.user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${req.user.name}`}
+                              alt={req.user.name}
+                              referrerPolicy="no-referrer"
+                              className="w-8 h-8 rounded-full border border-slate-200/50 object-cover shrink-0"
+                            />
+                            <div>
+                              <span className="font-bold block text-slate-800 dark:text-zinc-100">{req.user.name}</span>
+                              <span className="text-[10px] font-mono text-slate-400 block -mt-0.5">{req.user.email}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 font-semibold text-slate-700 dark:text-zinc-300">
+                            {req.type}
+                          </td>
+                          <td className="py-4 font-mono text-slate-400">
+                            {new Date(req.submittedAt).toLocaleString()}
+                          </td>
+                          <td className="py-4">
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-mono font-bold uppercase">
+                              Level 2 Audit Required
+                            </span>
+                          </td>
+                          <td className="py-4 text-right">
+                            <button
+                              onClick={() => setSelectedRequest(req)}
+                              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold uppercase transition hover:scale-102 active:scale-98"
+                            >
+                              Review & Audit
+                            </button>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </motion.div>
         )}
@@ -681,11 +862,37 @@ export default function AdminPanel({
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-[9px] font-mono text-slate-400 block uppercase">aggregate balance</span>
-                          <span className="text-xs font-mono font-bold text-slate-800 dark:text-white">
-                            ${((w?.availableBalance || 0) + (w?.savingsBalance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </span>
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <div>
+                            <span className="text-[9px] font-mono text-slate-400 block uppercase">aggregate balance</span>
+                            <span className="text-xs font-mono font-bold text-slate-800 dark:text-white">
+                              ${((w?.availableBalance || 0) + (w?.savingsBalance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                const amt = window.prompt(`Fund ${u.name}'s account (USD):`, '1000');
+                                if (amt && !isNaN(Number(amt)) && Number(amt) > 0) {
+                                  onAdjustWalletBalance(u.id, 'credit', Number(amt));
+                                }
+                              }}
+                              className="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold shadow-sm transition"
+                            >
+                              Fund Account
+                            </button>
+                            <button
+                              onClick={() => {
+                                const amt = window.prompt(`Deduct from ${u.name}'s account (USD):`, '1000');
+                                if (amt && !isNaN(Number(amt)) && Number(amt) > 0) {
+                                  onAdjustWalletBalance(u.id, 'debit', Number(amt));
+                                }
+                              }}
+                              className="px-2 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded text-[10px] font-bold shadow-sm transition"
+                            >
+                              Deduct Account
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1252,6 +1459,253 @@ export default function AdminPanel({
                 Save System Parameters
               </button>
             </form>
+          </motion.div>
+        )}
+
+        {/* DETAIL COMPLIANCE AUDIT MODAL */}
+        {selectedRequest && (
+          <motion.div
+            key="compliance-audit-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className={`w-full max-w-2xl rounded-3xl border p-6 md:p-8 space-y-6 text-left relative overflow-y-auto max-h-[90vh] ${
+                isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-slate-250 text-slate-900 shadow-2xl'
+              }`}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedRequest(null)}
+                className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Title Header */}
+              <div className="border-b border-slate-100/10 pb-4 pr-10">
+                <span className="text-[10px] font-mono font-bold text-indigo-500 uppercase tracking-widest block mb-1">
+                  Compliance Audit & Clearance
+                </span>
+                <h3 className="font-display font-black text-xl">
+                  {selectedRequest.type === 'Sovereign KYC ID Verification' ? 'Audit Sovereign KYC Profile' : 'Audit Tax Filing & Asset Limit'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Carefully review the cryptographic documents and ledger parameters below before granting institutional clearance.
+                </p>
+              </div>
+
+              {/* User Overview */}
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100/10 rounded-2xl">
+                <img
+                  src={selectedRequest.user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedRequest.user.name}`}
+                  alt={selectedRequest.user.name}
+                  referrerPolicy="no-referrer"
+                  className="w-12 h-12 rounded-full border border-slate-200/50 object-cover shrink-0"
+                />
+                <div>
+                  <h4 className="font-bold text-sm text-slate-800 dark:text-zinc-100">{selectedRequest.user.name}</h4>
+                  <p className="text-xs text-slate-400 font-mono">{selectedRequest.user.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-mono text-[9px] font-bold uppercase">
+                    Level 2 Audit Pending
+                  </span>
+                </div>
+              </div>
+
+              {/* Specific Details */}
+              {selectedRequest.type === 'Sovereign KYC ID Verification' ? (
+                // KYC DETAILS
+                <div className="space-y-6">
+                  {(() => {
+                    let kycDetails: any = {};
+                    try {
+                      if (selectedRequest.user.uploadedIdUrl) {
+                        kycDetails = JSON.parse(selectedRequest.user.uploadedIdUrl);
+                      }
+                    } catch(e) {}
+
+                    const legalName = kycDetails.fullName || selectedRequest.user.name || 'Not Provided';
+                    const dobVal = kycDetails.dob || selectedRequest.user.dateOfBirth || 'Not Provided';
+                    const addrVal = kycDetails.address || selectedRequest.user.residentialAddress || 'Not Provided';
+                    const idTypeVal = kycDetails.idType || selectedRequest.user.govIdType || 'SSN';
+                    const taxIdVal = kycDetails.taxId || selectedRequest.user.govIdNumber || 'Not Provided';
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Full Legal Name</span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200 block">{legalName}</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Date of Birth</span>
+                            <span className="font-bold text-slate-850 dark:text-zinc-200 block font-mono">{dobVal}</span>
+                          </div>
+                          <div className="space-y-1 sm:col-span-2">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Residential Address</span>
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200 block">{addrVal}</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Identifier Class</span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200 block">{idTypeVal}</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Tax ID / SSN</span>
+                            <span className="font-mono font-bold text-indigo-500 block">{taxIdVal}</span>
+                          </div>
+                        </div>
+
+                        {/* Sovereign ID Front & Back side-by-side scans */}
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                            Cryptographically Signed Identification Scans
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Front Scan Card */}
+                            <div className="group relative border border-slate-100/10 rounded-2xl overflow-hidden bg-zinc-950 aspect-[1.58/1] flex items-center justify-center">
+                              <img
+                                src={kycDetails.frontIdUrl || "https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&q=80&w=600"}
+                                alt="ID FRONT"
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-350"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-250 p-3 flex items-end">
+                                <span className="font-mono text-[9px] font-bold text-white tracking-widest uppercase">
+                                  ID DOCUMENT FRONT
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Back Scan Card */}
+                            <div className="group relative border border-slate-100/10 rounded-2xl overflow-hidden bg-zinc-950 aspect-[1.58/1] flex items-center justify-center">
+                              <img
+                                src={kycDetails.backIdUrl || "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=600"}
+                                alt="ID BACK"
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-350"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-250 p-3 flex items-end">
+                                <span className="font-mono text-[9px] font-bold text-white tracking-widest uppercase">
+                                  ID DOCUMENT BACK
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : (
+                // TAX FILING DETAILS
+                <div className="space-y-6">
+                  {(() => {
+                    let taxDetails: any = {};
+                    try {
+                      if (selectedRequest.user.sourceFunds) {
+                        taxDetails = JSON.parse(selectedRequest.user.sourceFunds);
+                      }
+                    } catch(e) {}
+
+                    const filingStatus = taxDetails.filingStatus || 'Not Specified';
+                    const w2Wages = Number(taxDetails.w2Wages || 0);
+                    const interestIncome = Number(taxDetails.interestIncome || 0);
+                    const capitalGains = Number(taxDetails.capitalGains || 0);
+                    const choiceDeduction = taxDetails.deductionChoice || 'standard';
+                    const deductionAmt = choiceDeduction === 'standard' ? 14600 : Number(taxDetails.itemizedAmount || 14600);
+
+                    const gross = w2Wages + interestIncome + capitalGains;
+                    const taxable = Math.max(0, gross - deductionAmt);
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 dark:bg-zinc-950/40 p-4 rounded-2xl border border-slate-100/10">
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Filing Status</span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200 block capitalize">{filingStatus}</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Gross Income (Sum)</span>
+                            <span className="font-bold font-mono text-slate-800 dark:text-zinc-200 block">${gross.toLocaleString()}</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Deduction applied</span>
+                            <span className="font-semibold text-slate-700 dark:text-zinc-300 block capitalize">{choiceDeduction} (${deductionAmt.toLocaleString()})</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Taxable Income basis</span>
+                            <span className="font-mono font-bold text-emerald-500 block">${taxable.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Breakdown */}
+                        <div className="space-y-2 text-xs">
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Income Breakdown Ledger</span>
+                          <div className="space-y-2">
+                            <div className="flex justify-between py-1.5 border-b border-slate-100/10">
+                              <span className="text-slate-400">W-2 Wages:</span>
+                              <span className="font-mono font-bold text-slate-700 dark:text-zinc-200">${w2Wages.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100/10">
+                              <span className="text-slate-400">1099-INT Tax-exempt Interest:</span>
+                              <span className="font-mono font-bold text-slate-700 dark:text-zinc-200">${interestIncome.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100/10">
+                              <span className="text-slate-400">1099-B Crypto/Stock Capital Gains:</span>
+                              <span className="font-mono font-bold text-slate-700 dark:text-zinc-200">${capitalGains.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100/10">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (selectedRequest.type === 'Sovereign KYC ID Verification') {
+                      onUpdateUserDetails(selectedRequest.userId, { verificationStatus: 'verified' });
+                    } else {
+                      try {
+                        const taxObj = JSON.parse(selectedRequest.user.sourceFunds);
+                        taxObj.taxFilingStatus = 'approved';
+                        onUpdateUserDetails(selectedRequest.userId, { sourceFunds: JSON.stringify(taxObj) });
+                      } catch(e) {}
+                    }
+                    setSelectedRequest(null);
+                  }}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition hover:scale-101 active:scale-99"
+                >
+                  Approve Compliance
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (selectedRequest.type === 'Sovereign KYC ID Verification') {
+                      onUpdateUserDetails(selectedRequest.userId, { verificationStatus: 'unverified' });
+                    } else {
+                      try {
+                        const taxObj = JSON.parse(selectedRequest.user.sourceFunds);
+                        taxObj.taxFilingStatus = 'rejected';
+                        onUpdateUserDetails(selectedRequest.userId, { sourceFunds: JSON.stringify(taxObj) });
+                      } catch(e) {}
+                    }
+                    setSelectedRequest(null);
+                  }}
+                  className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition hover:scale-101 active:scale-99"
+                >
+                  Deny Compliance
+                </button>
+              </div>
+
+            </motion.div>
           </motion.div>
         )}
 

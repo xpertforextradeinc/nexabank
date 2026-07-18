@@ -627,15 +627,15 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                   transition={{ duration: 0.2 }}
                 >
                   <div className="mb-6 text-left">
-                    <h2 className="font-display font-bold text-xl text-white">Secure Portal Entrance</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Authenticate to securely synchronize your custody account.</p>
+                    <h2 className="font-display font-bold text-xl text-white">Welcome to NexaBank</h2>
+                    <p className="text-xs text-zinc-400 mt-1">Sign in to access your custody dashboard.</p>
                   </div>
 
                   <form onSubmit={handleLogin} className="space-y-4">
                     
                     {/* Floating Label Ledger Email */}
                     <div className="flex flex-col text-left space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Registered Ledger Email</label>
+                      <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Email Address</label>
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
@@ -657,7 +657,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                     {/* Floating Label Passphrase */}
                     <div className="flex flex-col text-left space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Security Passphrase</label>
+                        <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Password</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -668,7 +668,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                           className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold focus:outline-none"
                           disabled={loading}
                         >
-                          Forgot Credential?
+                          Forgot Password?
                         </button>
                       </div>
                       <div className="relative">
@@ -701,11 +701,11 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 cursor-pointer disabled:opacity-50"
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-extrabold text-sm rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 cursor-pointer disabled:opacity-50"
                       id="login-submit-btn"
                     >
-                      {loading ? 'Confirming Signatures...' : 'Authorize Ledger Session'}
-                      <ArrowRight className="w-4 h-4" />
+                      {loading ? 'Confirming Signatures...' : 'Sign In'}
+                      <ArrowRight className="w-4 h-4 animate-pulse" />
                     </button>
                   </form>
 
@@ -720,14 +720,14 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                       <svg className="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 1.485 15.34 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.795-.085-1.4-.195-1.925H12.24z"/>
                       </svg>
-                      Continue with Google Core ID
+                      Sign in with Google
                     </button>
                   </div>
 
                   {/* Redirection to register */}
                   <div className="mt-6 text-center border-t border-zinc-850/30 pt-4">
                     <span className="text-xs text-zinc-400 font-sans">
-                      New sovereign client?{' '}
+                      New to NexaBank?{' '}
                       <button
                         onClick={() => {
                           setScreen('register');
@@ -737,7 +737,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                         className="text-emerald-400 font-bold hover:text-emerald-300 hover:underline cursor-pointer"
                         disabled={loading}
                       >
-                        Create portfolio
+                        Create an account
                       </button>
                     </span>
                   </div>

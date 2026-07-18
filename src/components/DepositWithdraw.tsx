@@ -1,9 +1,9 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  ArrowUpRight, ArrowDownRight, ArrowRight, Shield, QrCode, Clipboard, Check, Sparkles, AlertCircle, CheckCircle2, DollarSign, Loader2, Key, HelpCircle, ChevronRight, Wallet as WalletIcon 
+  ArrowUpRight, ArrowDownRight, ArrowRight, Shield, QrCode, Clipboard, Check, Sparkles, AlertCircle, CheckCircle2, DollarSign, Loader2, Key, HelpCircle, ChevronRight, Wallet as WalletIcon, Search
 } from 'lucide-react';
-import { UserProfile, Wallet, DepositRequest, WithdrawalRequest } from '../types';
+import { UserProfile, Wallet } from '../types';
 
 interface DepositWithdrawProps {
   user: UserProfile;
@@ -12,6 +12,18 @@ interface DepositWithdrawProps {
   onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo', pin?: string, payload?: any) => string | null | Promise<string | null>; // returns error message if any
   isDarkMode: boolean;
 }
+
+const MAJOR_US_BANKS = [
+  'Chase',
+  'Bank of America',
+  'Wells Fargo',
+  'Citi',
+  'Capital One',
+  'PNC',
+  'U.S. Bank',
+  'Truist',
+  'Fifth Third'
+];
 
 export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithdrawal, isDarkMode }: DepositWithdrawProps) {
   const [activeAction, setActiveAction] = useState<'deposit' | 'withdraw'>('deposit');
@@ -24,20 +36,20 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
 
   // Withdrawal States
   const [wthAmount, setWthAmount] = useState('');
-  const [wthMethod, setWthMethod] = useState<'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo'>('bank_wire');
+  const [wthTab, setWthTab] = useState<'crypto' | 'us_bank'>('crypto');
   
-  // Custom Method Payloads
-  const [bankRouting, setBankRouting] = useState('');
-  const [bankAccount, setBankAccount] = useState('');
-  const [bankName, setBankName] = useState('');
+  // Crypto States
+  const [cryptoCurrency, setCryptoCurrency] = useState('USDT');
+  const [cryptoAddress, setCryptoAddress] = useState('');
+  const [cryptoNetwork, setCryptoNetwork] = useState('TRC-20');
   
-  const [cashAppTag, setCashAppTag] = useState('');
-  const [cashAppPhone, setCashAppPhone] = useState('');
-  
-  const [zelleEmail, setZelleEmail] = useState('');
-  const [zellePhone, setZellePhone] = useState('');
-  
-  const [venmoUsername, setVenmoUsername] = useState('');
+  // US Bank States
+  const [bankSearch, setBankSearch] = useState('');
+  const [selectedBank, setSelectedBank] = useState('');
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
+  const [routingNumber, setRoutingNumber] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState('');
 
   const [enteredPin, setEnteredPin] = useState('');
   const [wthSuccess, setWthSuccess] = useState(false);
@@ -45,6 +57,12 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
   // Errors & loading
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Processing Fees Calculation
+  const parsedAmount = parseFloat(wthAmount) || 0;
+  const feeRate = wthTab === 'crypto' ? 0.015 : 0.005; // Crypto 1.5%, Bank Wire 0.5%
+  const calculatedFee = parsedAmount * feeRate;
+  const totalDeduction = parsedAmount + calculatedFee;
 
   const handleCopyAddress = () => {
     const addressToCopy = user.assignedCryptoWallet || '0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1';
@@ -72,7 +90,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }, 1500);
   };
 
-  const handleWithdrawalSubmit = (e: FormEvent) => {
+  const handleWithdrawalSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const amt = parseFloat(wthAmount);
@@ -82,9 +100,58 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       return;
     }
 
-    if (amt > wallet.availableBalance) {
-      setError(`Insufficient available balance. Max withdrawable: $${wallet.availableBalance.toLocaleString()}`);
+    if (totalDeduction > wallet.availableBalance) {
+      setError(`Insufficient available balance. Total discharge required (with fee): $${totalDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}. Your available balance is $${wallet.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`);
       return;
+    }
+
+    // Validation for Crypto Option
+    if (wthTab === 'crypto') {
+      if (!cryptoAddress) {
+        setError('Recipient Wallet Address is required.');
+        return;
+      }
+      if (cryptoAddress.length < 25) {
+        setError('Recipient Wallet Address must be a valid cryptographic address (minimum 25 characters).');
+        return;
+      }
+      const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(cryptoAddress);
+      if (!isAlphanumeric) {
+        setError('Recipient Wallet Address must contain only letters and numbers.');
+        return;
+      }
+    }
+
+    // Validation for US Bank Option
+    if (wthTab === 'us_bank') {
+      if (!selectedBank) {
+        setError('Please select a United States Bank from the dropdown list.');
+        return;
+      }
+      if (!routingNumber) {
+        setError('9-Digit Routing Number is required.');
+        return;
+      }
+      if (routingNumber.length !== 9 || isNaN(Number(routingNumber))) {
+        setError('Routing Number must be exactly 9 digits and contain only numbers.');
+        return;
+      }
+      if (!accountNumber) {
+        setError('Account Number is required.');
+        return;
+      }
+      if (accountNumber.length < 4 || accountNumber.length > 17 || isNaN(Number(accountNumber))) {
+        setError('Account Number must be between 4 and 17 numeric digits.');
+        return;
+      }
+      if (!accountHolderName) {
+        setError('Account Holder Full Name is required.');
+        return;
+      }
+      if (accountHolderName.trim().length < 3) {
+        setError('Account Holder Full Name must be at least 3 characters.');
+        return;
+      }
     }
 
     // Safety checks
@@ -111,20 +178,39 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }
 
     setLoading(true);
-    setTimeout(async () => {
-      
-      let payload = {};
-      if (wthMethod === 'bank_wire') {
-        payload = { bankRouting, bankAccount, bankName };
-      } else if (wthMethod === 'cash_app') {
-        payload = { cashAppTag, cashAppPhone };
-      } else if (wthMethod === 'zelle') {
-        payload = { zelleEmail, zellePhone };
-      } else if (wthMethod === 'venmo') {
-        payload = { venmoUsername };
-      }
-      
-      const result = onAddWithdrawal(amt, wthMethod, enteredPin, payload);
+
+    let method: 'bank_wire' | 'crypto_usdt' = 'bank_wire';
+    let payload = {};
+
+    if (wthTab === 'crypto') {
+      method = 'crypto_usdt';
+      payload = {
+        type: 'crypto',
+        currency: cryptoCurrency,
+        address: cryptoAddress,
+        network: cryptoNetwork,
+        fee: calculatedFee,
+        netAmount: amt,
+        grossAmount: totalDeduction,
+        submittedAt: new Date().toISOString()
+      };
+    } else {
+      method = 'bank_wire';
+      payload = {
+        type: 'us_bank',
+        bankName: selectedBank,
+        routingNumber: routingNumber,
+        accountNumber: accountNumber,
+        accountHolderName: accountHolderName,
+        fee: calculatedFee,
+        netAmount: amt,
+        grossAmount: totalDeduction,
+        submittedAt: new Date().toISOString()
+      };
+    }
+
+    try {
+      const result = onAddWithdrawal(totalDeduction, method, enteredPin, payload);
       const wthError = result instanceof Promise ? await result : result;
       setLoading(false);
       if (wthError) {
@@ -134,17 +220,22 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       setWthSuccess(true);
       setWthAmount('');
       setEnteredPin('');
-      setBankRouting('');
-      setBankAccount('');
-      setBankName('');
-      setCashAppTag('');
-      setCashAppPhone('');
-      setZelleEmail('');
-      setZellePhone('');
-      setVenmoUsername('');
+      setCryptoAddress('');
+      setRoutingNumber('');
+      setAccountNumber('');
+      setAccountHolderName('');
+      setBankSearch('');
+      setSelectedBank('');
       setTimeout(() => setWthSuccess(false), 5000);
-    }, 1800);
+    } catch (e: any) {
+      setLoading(false);
+      setError(e.message || 'An unexpected server error occurred.');
+    }
   };
+
+  const filteredBanks = MAJOR_US_BANKS.filter(bank => 
+    bank.toLowerCase().includes(bankSearch.toLowerCase())
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full text-left">
@@ -166,6 +257,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                   ? 'border-emerald-500 bg-emerald-50/10 text-emerald-600'
                   : 'border-slate-100/10 bg-transparent hover:bg-slate-50/5 text-slate-400'
               }`}
+              id="tab-deposit"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-500/15 rounded-xl text-emerald-500">
@@ -189,6 +281,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                   ? 'border-indigo-500 bg-indigo-50/10 text-indigo-600'
                   : 'border-slate-100/10 bg-transparent hover:bg-slate-50/5 text-slate-400'
               }`}
+              id="tab-withdraw"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-500/15 rounded-xl text-indigo-500">
@@ -484,139 +577,210 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
               <p className="text-xs text-slate-500 mt-0.5">Discharge balance ledgers directly into external bank or crypto networks.</p>
             </div>
 
+            {/* Tap Switcher between Crypto Wallet and US Bank Transfer */}
+            <div className="flex border-b border-slate-150 dark:border-zinc-800 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setWthTab('crypto');
+                  setError('');
+                }}
+                className={`flex-1 py-3 text-center text-xs font-semibold transition border-b-2 ${
+                  wthTab === 'crypto'
+                    ? 'border-indigo-500 text-indigo-500 font-bold'
+                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+                id="btn-withdraw-crypto-tab"
+              >
+                Crypto Wallet
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setWthTab('us_bank');
+                  setError('');
+                }}
+                className={`flex-1 py-3 text-center text-xs font-semibold transition border-b-2 ${
+                  wthTab === 'us_bank'
+                    ? 'border-indigo-500 text-indigo-500 font-bold'
+                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+                id="btn-withdraw-usbank-tab"
+              >
+                US Bank Transfer
+              </button>
+            </div>
+
             <form onSubmit={handleWithdrawalSubmit} className="flex flex-col gap-5">
               
-              {/* Withdrawal Method */}
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-3">
-                  1. CHOOSE PAYOUT DESTINATION
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setWthMethod('bank_wire')}
-                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      wthMethod === 'bank_wire'
-                        ? 'border-indigo-500 bg-indigo-50/10 text-indigo-600 font-semibold'
-                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
-                    }`}
-                  >
-                    <ArrowDownRight className="w-5 h-5 text-indigo-500" />
-                    <span className="text-[9px]">Wire IBAN</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWthMethod('crypto_usdt')}
-                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      wthMethod === 'crypto_usdt'
-                        ? 'border-emerald-500 bg-emerald-50/10 text-emerald-600 font-semibold'
-                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
-                    }`}
-                  >
-                    <QrCode className="w-5 h-5 text-emerald-500" />
-                    <span className="text-[9px]">Crypto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWthMethod('cash_app')}
-                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      wthMethod === 'cash_app'
-                        ? 'border-green-500 bg-green-50/10 text-green-600 font-semibold'
-                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
-                    }`}
-                  >
-                    <DollarSign className="w-5 h-5 text-green-500" />
-                    <span className="text-[9px]">Cash App</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWthMethod('zelle')}
-                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      wthMethod === 'zelle'
-                        ? 'border-purple-500 bg-purple-50/10 text-purple-600 font-semibold'
-                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
-                    }`}
-                  >
-                    <ArrowUpRight className="w-5 h-5 text-purple-500" />
-                    <span className="text-[9px]">Zelle</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWthMethod('venmo')}
-                    className={`p-3.5 rounded-2xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      wthMethod === 'venmo'
-                        ? 'border-blue-500 bg-blue-50/10 text-blue-600 font-semibold'
-                        : 'border-slate-100 dark:border-zinc-800 hover:border-slate-200 text-slate-600 dark:text-zinc-400 bg-transparent'
-                    }`}
-                  >
-                    <WalletIcon className="w-5 h-5 text-blue-500" />
-                    <span className="text-[9px]">Venmo</span>
-                  </button>
-                </div>
-              </div>
+              {/* Crypto Form Fields */}
+              {wthTab === 'crypto' && (
+                <div className="space-y-4">
+                  {/* Currency Selection Dropdown */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      Active Crypto Currency
+                    </label>
+                    <select
+                      value={cryptoCurrency}
+                      onChange={(e) => setCryptoCurrency(e.target.value)}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-sans text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                      id="select-crypto-currency"
+                    >
+                      <option value="USDT">Tether (USDT)</option>
+                      <option value="BTC">Bitcoin (BTC)</option>
+                      <option value="ETH">Ethereum (ETH)</option>
+                      <option value="SOL">Solana (SOL)</option>
+                      <option value="DOGE">Dogecoin (DOGE)</option>
+                    </select>
+                  </div>
 
-              {/* Destination Account Details */}
-              <div className="flex flex-col gap-3">
-                {wthMethod === 'bank_wire' && (
-                  <>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Bank Name</label>
-                      <input type="text" value={bankName} onChange={e => setBankName(e.target.value)} required placeholder="e.g. Chase Bank" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Routing No.</label>
-                        <input type="text" value={bankRouting} onChange={e => setBankRouting(e.target.value)} required placeholder="021000021" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Account No.</label>
-                        <input type="text" value={bankAccount} onChange={e => setBankAccount(e.target.value)} required placeholder="3049204..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                      </div>
-                    </div>
-                  </>
-                )}
-                {wthMethod === 'crypto_usdt' && (
+                  {/* Recipient Wallet Address with validation */}
                   <div>
-                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">ENTER EXTERNAL CRYPTO WALLET (USDT)</label>
-                    <input type="text" placeholder="TY27d...0xStableWalletDestination" required className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      Recipient Wallet Address
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter external alphanumeric destination address"
+                      value={cryptoAddress}
+                      onChange={(e) => setCryptoAddress(e.target.value)}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 text-slate-800 dark:text-zinc-200"
+                      id="input-crypto-address"
+                    />
                   </div>
-                )}
-                {wthMethod === 'cash_app' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">$Cashtag</label>
-                      <input type="text" value={cashAppTag} onChange={e => setCashAppTag(e.target.value)} required placeholder="$johndoe" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Phone Number</label>
-                      <input type="tel" value={cashAppPhone} onChange={e => setCashAppPhone(e.target.value)} required placeholder="+1 (555) ..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                    </div>
-                  </div>
-                )}
-                {wthMethod === 'zelle' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Zelle Email</label>
-                      <input type="email" value={zelleEmail} onChange={e => setZelleEmail(e.target.value)} placeholder="email@domain.com" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">Zelle Phone</label>
-                      <input type="tel" value={zellePhone} onChange={e => setZellePhone(e.target.value)} placeholder="+1 (555) ..." className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
-                    </div>
-                  </div>
-                )}
-                {wthMethod === 'venmo' && (
+
+                  {/* Network Selection Dropdown */}
                   <div>
-                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">@Username</label>
-                    <input type="text" value={venmoUsername} onChange={e => setVenmoUsername(e.target.value)} required placeholder="@johndoe" className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none" />
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      Network Selection
+                    </label>
+                    <select
+                      value={cryptoNetwork}
+                      onChange={(e) => setCryptoNetwork(e.target.value)}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-sans text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                      id="select-crypto-network"
+                    >
+                      <option value="TRC-20">TRC-20 (Tron Network - Low Fee)</option>
+                      <option value="ERC-20">ERC-20 (Ethereum Mainnet)</option>
+                      <option value="Solana">SOL (Solana Ecosystem)</option>
+                      <option value="Doge_Native">Doge Native (Dogecoin Blockchain)</option>
+                      <option value="BEP-20">BEP-20 (Binance Smart Chain)</option>
+                    </select>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* US Bank Form Fields */}
+              {wthTab === 'us_bank' && (
+                <div className="space-y-4">
+                  {/* Searchable/Interactive Major United States Banks Dropdown */}
+                  <div className="relative">
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      United States Bank Selector
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search or select a major US Bank..."
+                        value={selectedBank ? selectedBank : bankSearch}
+                        onChange={(e) => {
+                          setBankSearch(e.target.value);
+                          setSelectedBank(''); // Clear selection if typing
+                          setShowBankDropdown(true);
+                        }}
+                        onFocus={() => setShowBankDropdown(true)}
+                        className="w-full p-3 pl-9 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-sans text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                        id="input-bank-search"
+                      />
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+
+                    {showBankDropdown && (
+                      <div className="absolute z-30 w-full mt-1.5 max-h-48 overflow-y-auto bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-2xl shadow-xl">
+                        {filteredBanks.length > 0 ? (
+                          filteredBanks.map((bank) => (
+                            <button
+                              key={bank}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBank(bank);
+                                setBankSearch(bank);
+                                setShowBankDropdown(false);
+                                setError('');
+                              }}
+                              className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-950 text-xs text-slate-700 dark:text-zinc-300 transition"
+                            >
+                              {bank}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2.5 text-xs text-slate-400 font-mono text-center">
+                            No major United States banks match
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedBank && (
+                      <span className="text-[9px] font-mono text-emerald-500 block mt-1">
+                        ✓ Linked with: <strong>{selectedBank}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 9-Digit Routing Number with strict validation */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      9-Digit Routing Number
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={9}
+                      placeholder="e.g. 021000021"
+                      value={routingNumber}
+                      onChange={(e) => setRoutingNumber(e.target.value.replace(/\D/g, ''))}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                      id="input-routing-number"
+                    />
+                  </div>
+
+                  {/* Account Number with strict validation */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      Account Number
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={17}
+                      placeholder="Enter 4 to 17 digit bank account number"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-mono text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                      id="input-account-number"
+                    />
+                  </div>
+
+                  {/* Account Holder Full Name with validation */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
+                      Account Holder Full Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter complete legal name matching your account"
+                      value={accountHolderName}
+                      onChange={(e) => setAccountHolderName(e.target.value)}
+                      className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-2xl font-sans text-xs focus:outline-none text-slate-800 dark:text-zinc-200"
+                      id="input-account-holder-name"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Amount form */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 mt-2">
                 <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
-                  SPECIFY WITHDRAWAL AMOUNT
+                  SPECIFY WITHDRAWAL AMOUNT (USD)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
@@ -634,13 +798,31 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                 </div>
               </div>
 
+              {/* Transparent Fee & Totals Card */}
+              {parsedAmount > 0 && (
+                <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-zinc-950 border border-indigo-100/30 dark:border-zinc-850 text-xs space-y-2 text-left">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Withdrawal Amount:</span>
+                    <span className="font-mono text-slate-700 dark:text-zinc-300">${parsedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-indigo-500 font-medium">
+                    <span>Processing Fee ({wthTab === 'crypto' ? '1.5%' : '0.5%'}):</span>
+                    <span className="font-mono">${calculatedFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-indigo-100/30 dark:border-zinc-850 pt-2 font-bold text-slate-800 dark:text-white">
+                    <span>Aggregate Deduction:</span>
+                    <span className="font-mono">${totalDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Withdrawal PIN overlay if required */}
               {user.withdrawalPinRequired && (
                 <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3">
                   <div className="flex items-center gap-2">
                     <Key className="w-4 h-4 text-amber-500" />
                     <span className="font-display font-semibold text-[11px] text-amber-500 uppercase tracking-wider">
-                      Administrative PIN Security handcheck Enforced
+                      Administrative PIN Security Guard Enforced
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
@@ -655,7 +837,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                       setError('');
                     }}
                     maxLength={4}
-                    className="w-28 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/15 focus:border-amber-500 transition tracking-widest"
+                    className="w-28 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/15 focus:border-amber-500 transition tracking-widest text-slate-800 dark:text-white"
                     id="input-withdrawal-pin"
                   />
                 </div>

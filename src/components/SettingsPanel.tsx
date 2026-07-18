@@ -5,6 +5,7 @@ import {
   Upload, CheckCircle2, Moon, Sun, ClipboardCheck, Settings, Eye, Info
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import KYCWizard from './KYCWizard';
 
 interface SettingsPanelProps {
   user: UserProfile;
@@ -180,7 +181,7 @@ export default function SettingsPanel({
                       ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                       : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                   }`}>
-                    {user.verificationStatus.toUpperCase()}
+                    {user.verificationStatus === 'pending' ? 'Verification under review' : user.verificationStatus.toUpperCase()}
                   </span>
                 </div>
 
@@ -207,56 +208,13 @@ export default function SettingsPanel({
             </div>
 
             {/* KYC Upload (7 cols) */}
-            <div className={`lg:col-span-7 p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'}`}>
-              <div className="mb-4">
-                <h3 className="font-display font-bold text-base mb-1">Identity verification upgrade (KYC)</h3>
-                <p className="text-xs text-slate-500">Provide official identification documents to upgrade your ledger limits.</p>
-              </div>
-
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center transition duration-300 flex flex-col items-center justify-center cursor-pointer relative ${
-                  isDragging 
-                    ? 'border-indigo-500 bg-indigo-50/5' 
-                    : 'border-slate-200 dark:border-zinc-800 hover:border-slate-350 dark:hover:border-zinc-700 bg-transparent'
-                }`}
-                onClick={() => document.getElementById('settings-kyc-input')?.click()}
-              >
-                <input
-                  type="file"
-                  id="settings-kyc-input"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={handleFileInput}
-                />
-
-                <Upload className="w-8 h-8 text-slate-400 mb-2.5 animate-bounce" />
-                <span className="text-xs font-semibold block mb-1">Drag and drop passport scan, or click to browse</span>
-                <p className="text-[10px] text-slate-400">PDF, JPG, PNG sizes up to 10MB processed automatically by our secure verification engine.</p>
-
-                {kycFile && (
-                  <div className="mt-3.5 p-2 bg-slate-100 dark:bg-zinc-950 rounded-xl border border-slate-200/50 dark:border-zinc-850 flex items-center gap-2">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-500" />
-                    <span className="text-[10px] font-mono text-slate-700 dark:text-zinc-300">{kycFile}</span>
-                  </div>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {kycSuccess && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-800 text-emerald-600 rounded-xl text-xs flex items-center gap-2 mt-4"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Identity uploaded! Your verification is awaiting admin audit clearance.</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="lg:col-span-7">
+              <KYCWizard 
+                user={user}
+                onUpdateUser={onUpdateUser}
+                onAddAuditLog={onAddAuditLog}
+                isDarkMode={isDarkMode}
+              />
             </div>
           </motion.div>
         )}

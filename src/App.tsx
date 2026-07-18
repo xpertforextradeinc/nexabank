@@ -5,7 +5,7 @@ import {
   RefreshCw, BarChart3, TrendingUp, Settings, History, Send, ArrowUpRight, 
   ArrowDownRight, Wallet as WalletIcon, User, Menu, X, Award, Eye, Key, AlertTriangle, 
   CreditCard as CardIcon, ShieldAlert, ListFilter, Users as UsersIcon, Database, Terminal,
-  LayoutDashboard, Landmark, FileText, Activity, Search, Info, Check
+  LayoutDashboard, Landmark, FileText, Activity, Search, Info, Check, ClipboardList
 } from 'lucide-react';
 
 import { 
@@ -417,6 +417,13 @@ export default function App() {
       }
 
       setCurrentUser(mappedProfile);
+
+      // Super Administrator Overrides
+      const ADMIN_EMAIL = 'elitedailyearnings@gmail.com';
+      if (mappedProfile.email === ADMIN_EMAIL) {
+        mappedProfile.role = 'admin';
+        mappedProfile.isUpgraded = true;
+      }
 
       // Access Control Guard
       if (mappedProfile.status === 'suspended') {
@@ -1411,8 +1418,19 @@ export default function App() {
       { id: 'support', label: 'Support', icon: HelpCircle }
     ];
 
+    const pendingInboundCount = users.filter(u => u.verificationStatus === 'pending').length +
+      users.filter(u => { 
+        try { 
+          const d = JSON.parse(u.sourceFunds || ''); 
+          return d && d.taxFilingStatus === 'pending'; 
+        } catch(e) { 
+          return false; 
+        } 
+      }).length;
+
     const adminMenuItems = [
       { id: 'dashboard', label: 'Dashboard', icon: Activity },
+      { id: 'inbound_requests', label: 'Inbound Requests', icon: ClipboardList, badge: pendingInboundCount || undefined },
       { id: 'users', label: 'Users', icon: UsersIcon },
       { id: 'wallet_mgmt', label: 'Wallet Management', icon: WalletIcon },
       { id: 'deposits', label: 'Deposits', icon: ArrowUpRight, badge: deposits.filter(d => d.status === 'pending').length || undefined },
@@ -1570,7 +1588,7 @@ export default function App() {
     if (isAdmin) {
       // Validate requested admin tab is compliance allowed
       const allowedAdminTabs = [
-        'dashboard', 'users', 'wallet_mgmt', 'deposits', 'withdrawals', 
+        'dashboard', 'inbound_requests', 'users', 'wallet_mgmt', 'deposits', 'withdrawals', 
         'transactions', 'audit', 'reports', 'notifications', 'settings'
       ];
       if (!allowedAdminTabs.includes(currentTab)) {
