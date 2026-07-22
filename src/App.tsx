@@ -457,7 +457,7 @@ export default function App() {
         setCurrentTab('dashboard');
       }
 
-      if (role === 'admin' || mappedProfile.role === 'admin') {
+      if (mappedProfile.role === 'admin') {
         // Admin authority queries
         const [pRes, wRes, tRes, dRes, wiRes, aRes, nRes] = await Promise.all([
           supabase.from('profiles').select('*'),
