@@ -433,16 +433,17 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                       </span>
                       <p className="text-[11px]">Deploy matching USD amounts to the designated stable wallet below.</p>
                       <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                        <span className="font-mono text-[10px] text-slate-500 dark:text-zinc-300 truncate flex-1">
-                          {user.assignedCryptoWallet || '0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleCopyAddress}
-                          className="p-1 text-slate-400 hover:text-slate-900 transition"
-                        >
-                          {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Clipboard className="w-3.5 h-3.5" />}
-                        </button>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
+                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">BTC: bc1q3az2amlwrsn4szz3myxehjzf6qxdkhxm9jz4yt</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
+                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">ETH/USDT: 0xBd512D38791943164048D14Eb487E47f7C039fe2</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
+                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">SOL: Gzd2KNHaWbkSUnZvBtrMZT6oUWvnEFtFLNVo5d9N5WJ7</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

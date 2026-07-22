@@ -458,6 +458,18 @@ export default function App() {
       }
 
       if (mappedProfile.role === 'admin') {
+        // Diagnostic Logging
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { user } } = await supabase.auth.getUser();
+          console.log("Admin Data Loading - Diagnostic Check:");
+          console.log("Session exists:", !!session);
+          console.log("User exists:", !!user);
+          console.log("User ID:", user?.id);
+        } catch (e) {
+          console.error("Diagnostic logging failed:", e);
+        }
+
         // Admin authority queries
         const [pRes, wRes, tRes, dRes, wiRes, aRes, nRes] = await Promise.all([
           supabase.from('profiles').select('*'),
