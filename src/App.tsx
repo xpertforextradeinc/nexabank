@@ -236,6 +236,25 @@ export default function App() {
   }, []);
 
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
+
+  // Sync URL with currentTab
+  useEffect(() => {
+    const tabPath = `/${currentTab}`;
+    if (window.location.pathname !== tabPath) {
+      window.history.pushState({}, '', tabPath);
+    }
+  }, [currentTab]);
+
+  // Handle popstate
+  useEffect(() => {
+    const handlePopState = () => {
+      const tab = window.location.pathname.replace('/', '') || 'dashboard';
+      setCurrentTab(tab);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -416,14 +435,14 @@ export default function App() {
         console.warn("Auth metadata loading bypassed:", authErr);
       }
 
-      setCurrentUser(mappedProfile);
-
       // Super Administrator Overrides
       const ADMIN_EMAIL = 'elitedailyearnings@gmail.com';
       if (mappedProfile.email === ADMIN_EMAIL) {
         mappedProfile.role = 'admin';
         mappedProfile.isUpgraded = true;
       }
+
+      setCurrentUser(mappedProfile);
 
       // Access Control Guard
       if (mappedProfile.status === 'suspended') {
@@ -1246,7 +1265,9 @@ export default function App() {
 
       {/* RENDER LOGIN / REGISTRATION GATE */}
       {!currentUser ? (
-        <AuthScreens onLoginSuccess={async (userAuth) => {
+        <AuthScreens 
+          onScreenChange={(screen) => window.history.pushState({}, '', `/${screen}`)}
+          onLoginSuccess={async (userAuth) => {
            // Provide a temporary optimistic user state so the UI transitions instantly.
            setCurrentUser({
              id: userAuth.id,

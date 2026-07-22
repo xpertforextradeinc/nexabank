@@ -27,6 +27,7 @@ import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthScreensProps {
   onLoginSuccess: (user: any) => void;
+  onScreenChange?: (screen: 'login' | 'register' | 'forgot' | 'verify') => void;
 }
 
 const COUNTRIES = [
@@ -42,9 +43,15 @@ const COUNTRIES = [
   { code: 'AU', name: 'Australia (+61)' }
 ];
 
-export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
+export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScreensProps) {
   const supabase = getSupabase();
   const [screen, setScreen] = useState<'login' | 'register' | 'forgot' | 'verify'>('login');
+
+  useEffect(() => {
+    if (onScreenChange) {
+      onScreenChange(screen);
+    }
+  }, [screen, onScreenChange]);
   
   // Login fields
   const [email, setEmail] = useState('');
