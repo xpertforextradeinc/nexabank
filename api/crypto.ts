@@ -7,6 +7,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log("Diagnostic check:", {
+      COINGECKO: !!process.env.COINGECKO_API_KEY,
+      MOBULA: !!process.env.MOBULA_API_KEY,
+      COINSTATS: !!process.env.COINSTATS_API_KEY,
+    });
     const response = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
       params: {
         vs_currency: 'usd',
