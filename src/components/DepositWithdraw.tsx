@@ -25,6 +25,12 @@ const MAJOR_US_BANKS = [
   'Fifth Third'
 ];
 
+const cryptoWallets = {
+  BTC: 'bc1q3az2amlwrsn4szz3myxehjzf6qxdkhxm9jz4yt',
+  'ETH/USDT': '0xBd512D38791943164048D14Eb487E47f7C039fe2',
+  SOL: 'Gzd2KNHaWbkSUnZvBtrMZT6oUWvnEFtFLNVo5d9N5WJ7'
+};
+
 export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithdrawal, isDarkMode }: DepositWithdrawProps) {
   const [activeAction, setActiveAction] = useState<'deposit' | 'withdraw'>('deposit');
   
@@ -33,6 +39,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
   const [depMethod, setDepMethod] = useState<'bank_wire' | 'crypto_usdt' | 'credit_card'>('bank_wire');
   const [copied, setCopied] = useState(false);
   const [depSuccess, setDepSuccess] = useState(false);
+  const [selectedCryptoNetwork, setSelectedCryptoNetwork] = useState('BTC');
 
   // Withdrawal States
   const [wthAmount, setWthAmount] = useState('');
@@ -433,15 +440,28 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                       </span>
                       <p className="text-[11px]">Deploy matching USD amounts to the designated stable wallet below.</p>
                       <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">BTC: bc1q3az2amlwrsn4szz3myxehjzf6qxdkhxm9jz4yt</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">ETH/USDT: 0xBd512D38791943164048D14Eb487E47f7C039fe2</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                            <span className="font-mono text-[9px] text-slate-500 dark:text-zinc-300 truncate">SOL: Gzd2KNHaWbkSUnZvBtrMZT6oUWvnEFtFLNVo5d9N5WJ7</span>
+                        <div className="space-y-3">
+                          <select 
+                            value={selectedCryptoNetwork}
+                            onChange={(e) => setSelectedCryptoNetwork(e.target.value)}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          >
+                            <option value="BTC">Bitcoin (BTC)</option>
+                            <option value="ETH/USDT">Ethereum (ETH/USDT)</option>
+                            <option value="SOL">Solana (SOL)</option>
+                          </select>
+                          
+                          <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-900 p-3 rounded-xl">
+                            <span className="font-mono text-[10px] text-slate-600 dark:text-zinc-400 truncate flex-1">
+                              {cryptoWallets[selectedCryptoNetwork as keyof typeof cryptoWallets]}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(cryptoWallets[selectedCryptoNetwork as keyof typeof cryptoWallets])}
+                              className="p-1.5 text-slate-400 hover:text-emerald-500 transition"
+                            >
+                              <Clipboard className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
