@@ -437,7 +437,9 @@ export default function App() {
 
       // Super Administrator Overrides
       const ADMIN_EMAIL = 'elitedailyearnings@gmail.com';
-      if (mappedProfile.email === ADMIN_EMAIL) {
+      if (mappedProfile.email === ADMIN_EMAIL && mappedProfile.role !== 'admin') {
+        console.log("Upgrading admin user in database...");
+        await supabase.from('profiles').update({ role: 'admin' }).eq('id', mappedProfile.id);
         mappedProfile.role = 'admin';
         mappedProfile.isUpgraded = true;
       }
@@ -471,6 +473,7 @@ export default function App() {
         }
 
         // Admin authority queries
+        console.log("Fetching admin data...");
         const [pRes, wRes, tRes, dRes, wiRes, aRes, nRes] = await Promise.all([
           supabase.from('profiles').select('*'),
           supabase.from('wallets').select('*'),
@@ -480,6 +483,11 @@ export default function App() {
           supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }),
           supabase.from('notifications').select('*').order('timestamp', { ascending: false })
         ]);
+        
+        console.log("Admin query results:", {
+            profilesError: pRes.error,
+            profilesCount: pRes.data?.length
+        });
 
         if (pRes.data) setUsers(pRes.data.map(mapProfileFromDB));
         if (wRes.data) setWallets(wRes.data.map(mapWalletFromDB));

@@ -1,9 +1,10 @@
 import { useState, ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { 
-  ArrowUpRight, ArrowDownRight, Wallet as WalletIcon, PiggyBank, Clock, TrendingUp, TrendingDown, Shield, Award, Sparkles, Check, ChevronRight, ShoppingBag, Coffee, Car, DollarSign, Video, HelpCircle, AlertTriangle 
+  ArrowUpRight, ArrowDownRight, Wallet as WalletIcon, PiggyBank, Clock, TrendingUp, TrendingDown, Shield, Award, Sparkles, Check, ChevronRight, ShoppingBag, Coffee, Car, DollarSign, Video, HelpCircle, AlertTriangle, Bitcoin
 } from 'lucide-react';
 import { UserProfile, Wallet, BankTransaction, WithdrawalRequest } from '../types';
+import { useCryptoData } from '../hooks/useCryptoData';
 
 interface DashboardOverviewProps {
   user: UserProfile;
@@ -29,6 +30,7 @@ const CATEGORY_ICONS: Record<string, ReactNode> = {
 export default function DashboardOverview({ user, wallet, transactions, withdrawals, onNavigate, isDarkMode }: DashboardOverviewProps) {
   const [activeRange, setActiveRange] = useState<'7d' | '30d'>('7d');
   const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
+  const { data: cryptoData, loading: cryptoLoading } = useCryptoData();
 
   // Sparkline data generator
   const getLinePoints = () => {
@@ -114,7 +116,7 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
       )}
 
       {/* Upper Cards: Real-time Balance Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Metric 1: Main Balance */}
         <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative flex flex-col justify-between overflow-hidden`}>
           {user.status === 'frozen' && (
@@ -197,6 +199,36 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
                 <TrendingUp className="w-3.5 h-3.5" /> +$182.40
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Crypto Prices Card */}
+        <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative flex flex-col justify-between`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-zinc-950 text-sky-400' : 'bg-sky-50 text-sky-600'}`}>
+              <Bitcoin className="w-5 h-5" />
+            </div>
+            <div>
+              <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
+                Live Assets
+              </span>
+              <h3 className="font-display font-bold text-sm leading-tight">Market Indices</h3>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {cryptoLoading ? (
+              <span className="text-xs text-slate-400">Loading rates...</span>
+            ) : cryptoData && cryptoData.length > 0 ? (
+              cryptoData.slice(0, 3).map((coin: any) => (
+                <div key={coin.id} className="flex justify-between items-center text-xs">
+                  <span className="font-mono capitalize text-slate-500">{coin.symbol}</span>
+                  <span className="font-bold">${coin.current_price.toLocaleString()}</span>
+                </div>
+              ))
+            ) : (
+              <span className="text-xs text-rose-500">Service Unavailable</span>
+            )}
           </div>
         </div>
       </div>
