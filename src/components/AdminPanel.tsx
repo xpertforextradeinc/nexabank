@@ -85,6 +85,7 @@ export default function AdminPanel({
   // Live Notification Feed
   const [liveEvents, setLiveEvents] = useState<{id: string, text: string, time: string}[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [viewUserDetail, setViewUserDetail] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     const channel = supabase.channel('admin_live_feed')
@@ -958,6 +959,12 @@ export default function AdminPanel({
                           </div>
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <button
+                              onClick={() => setViewUserDetail(u)}
+                              className="px-2 py-1 bg-slate-500 hover:bg-slate-600 text-white rounded text-[10px] font-bold shadow-sm transition"
+                            >
+                              View Details
+                            </button>
+                            <button
                               onClick={() => {
                                 const amt = window.prompt(`Fund ${u.name}'s account (USD):`, '1000');
                                 if (amt && !isNaN(Number(amt)) && Number(amt) > 0) {
@@ -995,6 +1002,25 @@ export default function AdminPanel({
           </motion.div>
         )}
 
+        {viewUserDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg text-left">
+              <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white">User Profile Details</h3>
+              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                <p><strong>Name:</strong> {viewUserDetail.name}</p>
+                <p><strong>Email:</strong> {viewUserDetail.email}</p>
+                <p><strong>Phone:</strong> {viewUserDetail.phone || 'N/A'}</p>
+                <p><strong>Role:</strong> {viewUserDetail.role}</p>
+                <p><strong>Status:</strong> {viewUserDetail.status}</p>
+                <p><strong>Crypto Wallet:</strong> {viewUserDetail.assignedCryptoWallet || 'N/A'}</p>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button onClick={() => setViewUserDetail(null)} className="px-4 py-2 bg-slate-200 dark:bg-zinc-800 rounded-xl">Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+        
         {/* TAB 3: LEDGER ADJUSTMENTS (WALLET MGMT) */}
         {activeSubTab === 'wallet_mgmt' && (
           <motion.div
