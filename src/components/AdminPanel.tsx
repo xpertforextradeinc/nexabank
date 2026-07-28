@@ -24,6 +24,8 @@ interface AdminPanelProps {
   onRequireDepositWithdrawal?: (reqId: string, amount: number) => void;
   onUpdateUserDetails: (userId: string, updates: Partial<UserProfile>) => void;
   onAdjustWalletBalance: (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number) => void;
+  onCreateCustomer?: (customerData: { name: string; email: string; initialBalance: number; phone?: string; status?: 'active' | 'suspended' | 'frozen' | 'hold' }) => Promise<void>;
+  onSeedDemoCustomers?: () => Promise<void>;
   onRefresh: () => void;
   isDarkMode: boolean;
   activeSubTab: string;
@@ -46,6 +48,8 @@ export default function AdminPanel({
   onRequireDepositWithdrawal,
   onUpdateUserDetails,
   onAdjustWalletBalance,
+  onCreateCustomer,
+  onSeedDemoCustomers,
   onRefresh,
   isDarkMode,
   activeSubTab,
@@ -59,6 +63,16 @@ export default function AdminPanel({
   const [adjustType, setAdjustType] = useState<'credit' | 'debit' | 'bonus' | 'adjust'>('credit');
   const [adjustSuccess, setAdjustSuccess] = useState('');
   const [adjustError, setAdjustError] = useState('');
+  const [showAllUsersToggle, setShowAllUsersToggle] = useState(false);
+
+  // New Customer Modal States
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustEmail, setNewCustEmail] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustBalance, setNewCustBalance] = useState('10000');
+  const [newCustStatus, setNewCustStatus] = useState<'active' | 'suspended' | 'frozen' | 'hold'>('active');
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
   // Profile Edit fields
   const [editName, setEditName] = useState('');
@@ -119,7 +133,7 @@ export default function AdminPanel({
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && u.role !== 'admin';
+    return matchesSearch && (showAllUsersToggle || u.role !== 'admin');
   });
 
   const handleSelectUser = (user: UserProfile) => {
@@ -904,15 +918,35 @@ export default function AdminPanel({
                     <p className="text-xs text-slate-500 mt-0.5">Search active customer portfolios, override compliance parameters, and generate safety codes.</p>
                   </div>
 
-                  <div className="relative w-full sm:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Filter by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl font-sans text-xs focus:outline-none"
-                    />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Filter by name or email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl font-sans text-xs focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Create Customer
+                    </button>
+
+                    <label className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showAllUsersToggle}
+                        onChange={(e) => setShowAllUsersToggle(e.target.checked)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                      />
+                      Include Admins
+                    </label>
                   </div>
                 </div>
 
@@ -992,8 +1026,36 @@ export default function AdminPanel({
                     );
                   })}
                   {filteredUsers.length === 0 && (
-                    <div className="col-span-2 text-center py-12 text-slate-500 font-mono text-xs">
-                      NO REGISTERED CUSTOMERS FOUND IN LEDGER ARCHIVE
+                    <div className="col-span-2 text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 space-y-4">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500 flex items-center justify-center mx-auto">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-800 dark:text-white">No Customers Found in Ledger</h4>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                          There are currently no registered customer portfolios matching your view criteria. You can create a new customer portfolio or seed sample demo customers.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3 pt-2">
+                        {onCreateCustomer && (
+                          <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Create Customer Account
+                          </button>
+                        )}
+                        {onSeedDemoCustomers && (
+                          <button
+                            onClick={onSeedDemoCustomers}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-400" />
+                            Seed Sample Demo Customers
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1017,6 +1079,128 @@ export default function AdminPanel({
               <div className="mt-6 flex justify-end">
                 <button onClick={() => setViewUserDetail(null)} className="px-4 py-2 bg-slate-200 dark:bg-zinc-800 rounded-xl">Close</button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* CREATE CUSTOMER MODAL */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDarkMode ? 'bg-zinc-900 text-white border border-zinc-800' : 'bg-white text-slate-900 border border-slate-100'} text-left space-y-4`}>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+                <h3 className="font-display font-bold text-base flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-indigo-500" />
+                  Create Customer Portfolio
+                </h3>
+                <button onClick={() => setShowCreateModal(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newCustName || !newCustEmail) return;
+                setIsCreatingCustomer(true);
+                try {
+                  if (onCreateCustomer) {
+                    await onCreateCustomer({
+                      name: newCustName,
+                      email: newCustEmail,
+                      phone: newCustPhone,
+                      initialBalance: Number(newCustBalance) || 0,
+                      status: newCustStatus
+                    });
+                  }
+                  setShowCreateModal(false);
+                  setNewCustName('');
+                  setNewCustEmail('');
+                  setNewCustPhone('');
+                  setNewCustBalance('10000');
+                } finally {
+                  setIsCreatingCustomer(false);
+                }
+              }} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block text-slate-500 dark:text-slate-400 font-medium mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Marcus Vance"
+                    value={newCustName}
+                    onChange={(e) => setNewCustName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-500 dark:text-slate-400 font-medium mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. marcus@company.com"
+                    value={newCustEmail}
+                    onChange={(e) => setNewCustEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-500 dark:text-slate-400 font-medium mb-1">Phone Number (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +1 (555) 123-4567"
+                    value={newCustPhone}
+                    onChange={(e) => setNewCustPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-500 dark:text-slate-400 font-medium mb-1">Starting Balance ($)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="any"
+                      value={newCustBalance}
+                      onChange={(e) => setNewCustBalance(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-500 dark:text-slate-400 font-medium mb-1">Account Status</label>
+                    <select
+                      value={newCustStatus}
+                      onChange={(e) => setNewCustStatus(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="frozen">Frozen</option>
+                      <option value="hold">Administrative Hold</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingCustomer}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+                  >
+                    {isCreatingCustomer ? 'Provisioning...' : 'Create Account'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

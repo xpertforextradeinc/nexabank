@@ -459,7 +459,14 @@ export default function App() {
         setCurrentTab('dashboard');
       }
 
-      if (mappedProfile.role === 'admin') {
+      if (mappedProfile.role === 'admin' || mappedProfile.email === ADMIN_EMAIL) {
+        // Ensure the admin user exists in admin_users table so Supabase RLS permits full administrative queries
+        try {
+          await supabase.from('admin_users').upsert({ user_id: mappedProfile.id }, { onConflict: 'user_id' });
+        } catch (adminTableErr) {
+          console.warn("admin_users upsert notice:", adminTableErr);
+        }
+
         // Diagnostic Logging
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -1153,6 +1160,79 @@ export default function App() {
     triggerToast(`Ledger assets adjusted successfully.`);
   };
 
+  // ADMIN ACTION: Create New Customer Portfolio Directly
+  const handleCreateCustomer = async (data: { name: string; email: string; initialBalance: number; phone?: string; status?: 'active' | 'suspended' | 'frozen' | 'hold' }) => {
+    try {
+      const newUserId = crypto.randomUUID();
+      const acctNum = String(Math.floor(1000000000 + Math.random() * 9000000000));
+      
+      const newProfile = {
+        id: newUserId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || '',
+        role: 'user',
+        status: data.status || 'active',
+        verification_status: 'verified',
+        account_number: acctNum,
+        routing_number: '021000021'
+      };
+
+      const { error: pErr } = await supabase.from('profiles').insert(newProfile);
+      if (pErr) throw pErr;
+
+      const newWallet = {
+        user_id: newUserId,
+        main_balance: data.initialBalance,
+        available_balance: data.initialBalance,
+        pending_balance: 0,
+        savings_balance: 0
+      };
+
+      const { error: wErr } = await supabase.from('wallets').insert(newWallet);
+      if (wErr) throw wErr;
+
+      // Add initial audit log
+      if (currentUser) {
+        await supabase.from('audit_logs').insert({
+          actor_id: currentUser.id,
+          actor_name: currentUser.name,
+          action: 'Create Customer Account',
+          target_user_id: newUserId,
+          target_user_name: data.name,
+          details: `Provisioned customer ledger portfolio with $${data.initialBalance.toLocaleString()} starting balance.`
+        });
+      }
+
+      triggerToast(`Customer ${data.name} created successfully!`);
+      if (currentUser) {
+        loadUserData(currentUser.id, 'admin');
+      }
+    } catch (err: any) {
+      console.error("Error creating customer:", err);
+      triggerToast(`Failed to create customer: ${err.message || err}`);
+    }
+  };
+
+  // ADMIN ACTION: Seed Sample Demo Customers for testing
+  const handleSeedDemoCustomers = async () => {
+    try {
+      const samples = [
+        { name: 'Sarah Jenkins', email: 'sarah.j@example.com', initialBalance: 24500, phone: '+1 (555) 234-5678' },
+        { name: 'Marcus Vance', email: 'm.vance@techcorp.io', initialBalance: 88200, phone: '+1 (555) 876-5432' },
+        { name: 'Elena Rostova', email: 'elena.r@globalcapital.com', initialBalance: 142000, phone: '+1 (555) 432-1098' },
+        { name: 'David Chen', email: 'dchen@innovate.co', initialBalance: 9500, phone: '+1 (555) 987-6543' }
+      ];
+
+      for (const s of samples) {
+        await handleCreateCustomer(s);
+      }
+      triggerToast('Sample customer profiles seeded successfully!');
+    } catch (err: any) {
+      console.error("Error seeding sample customers:", err);
+    }
+  };
+
   // Process data mapped for active UI rendering
   const activeUserWallet = wallets.find((w) => w.userId === currentUser?.id);
   const activeUserTransactions = transactions.filter((t) => t.userId === currentUser?.id);
@@ -1669,6 +1749,8 @@ export default function App() {
           onRequireDepositWithdrawal={handleRequireDepositWithdrawal}
           onUpdateUserDetails={handleUpdateUserDetails}
           onAdjustWalletBalance={handleAdjustWalletBalance}
+          onCreateCustomer={handleCreateCustomer}
+          onSeedDemoCustomers={handleSeedDemoCustomers}
           onRefresh={() => loadUserData(currentUser.id, currentUser.role)}
           isDarkMode={isDarkMode}
           activeSubTab={currentTab}
