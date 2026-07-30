@@ -2,9 +2,11 @@ import { useState, DragEvent, ChangeEvent, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, Check, Award, ToggleLeft, ToggleRight, Lock, Key, AlertCircle, 
-  Upload, CheckCircle2, Moon, Sun, ClipboardCheck, Settings, Eye, Info
+  Upload, CheckCircle2, Moon, Sun, ClipboardCheck, Settings, Eye, EyeOff, Info,
+  ShieldCheck, ShieldAlert, Smartphone, Laptop, Globe, RefreshCw, Terminal,
+  History, QrCode, LogOut, Bell, AlertTriangle
 } from 'lucide-react';
-import { UserProfile } from '../types';
+import { UserProfile, AuditLog } from '../types';
 import KYCWizard from './KYCWizard';
 
 interface SettingsPanelProps {
@@ -14,6 +16,7 @@ interface SettingsPanelProps {
   onUpdateUser: (updated: Partial<UserProfile>) => void;
   onAddAuditLog: (action: string, details: string) => void;
   activeSection?: 'profile' | 'security' | 'settings';
+  auditLogs?: AuditLog[];
 }
 
 export default function SettingsPanel({ 
@@ -22,13 +25,45 @@ export default function SettingsPanel({
   onToggleDarkMode, 
   onUpdateUser, 
   onAddAuditLog,
-  activeSection = 'profile'
+  activeSection = 'profile',
+  auditLogs = []
 }: SettingsPanelProps) {
-  // Security States
+  // Security PIN States
   const [pin, setPin] = useState(user.withdrawalPin || '');
   const [pinMsg, setPinMsg] = useState('');
   const [phone, setPhone] = useState(user.phone || '');
   const [phoneMsg, setPhoneMsg] = useState('');
+
+  // Password Change States
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passMsg, setPassMsg] = useState('');
+  const [passError, setPassError] = useState('');
+
+  // Active Sessions State
+  const [sessions, setSessions] = useState([
+    { id: 'sess-1', device: 'Chrome 127.0 (macOS)', ip: '198.51.100.42', location: 'New York, US', isCurrent: true, lastActive: 'Active Now' },
+    { id: 'sess-2', device: 'Safari (iPhone 15 Pro)', ip: '172.56.21.10', location: 'New York, US', isCurrent: false, lastActive: '2 hours ago' },
+    { id: 'sess-3', device: 'Firefox 125.0 (Windows 11)', ip: '104.28.19.45', location: 'London, UK', isCurrent: false, lastActive: '1 day ago' }
+  ]);
+  const [sessionRevokedMsg, setSessionRevokedMsg] = useState('');
+
+  // Security Alert Preferences
+  const [secAlerts, setSecAlerts] = useState({
+    loginAlerts: true,
+    highValLock: true,
+    autoTimeout: true,
+    unusualIpFlag: true
+  });
+
+  // 2FA Authenticator Modal Setup
+  const [show2faSetup, setShow2faSetup] = useState(false);
+  const [totpInput, setTotpInput] = useState('');
+  const [totpError, setTotpError] = useState('');
+  const [totpSuccess, setTotpSuccess] = useState('');
 
   // Drag-and-Drop KYC State
   const [isDragging, setIsDragging] = useState(false);
@@ -48,6 +83,84 @@ export default function SettingsPanel({
   const [resetError, setResetError] = useState('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState('');
 
+  // Security Health Calculation
+  const calculateSecurityScore = () => {
+    let score = 0;
+    if (user.mfaEnabled) score += 25;
+    if (user.withdrawalPinRequired && user.withdrawalPin) score += 25;
+    if (user.verificationStatus === 'verified') score += 25;
+    if (user.status === 'active') score += 25;
+    return score;
+  };
+
+  const securityScore = calculateSecurityScore();
+
+  // Password Strength Evaluator
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { label: 'None', score: 0, color: 'bg-slate-200 dark:bg-zinc-800' };
+    if (pass.length < 6) return { label: 'Weak', score: 25, color: 'bg-rose-500' };
+    let score = 50;
+    if (/[A-Z]/.test(pass)) score += 15;
+    if (/[0-9]/.test(pass)) score += 15;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 20;
+
+    if (score >= 90) return { label: 'Bank-Grade (Ultra Secure)', score: 100, color: 'bg-emerald-500' };
+    if (score >= 70) return { label: 'Strong', score: 75, color: 'bg-indigo-500' };
+    return { label: 'Moderate', score: 50, color: 'bg-amber-500' };
+  };
+
+  const passStrength = getPasswordStrength(newPass);
+
+  // Password Change Handler
+  const handlePasswordUpdate = (e: FormEvent) => {
+    e.preventDefault();
+    setPassError('');
+    setPassMsg('');
+    if (!currentPass) {
+      setPassError('Current password is required to verify identity.');
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassError('New password must be at least 6 characters long.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassError('New passwords do not match. Please verify and retry.');
+      return;
+    }
+    onAddAuditLog('Update Passphrase Credential', 'User successfully changed login security password.');
+    setPassMsg('Password successfully changed & re-encrypted across secure vault!');
+    setCurrentPass('');
+    setNewPass('');
+    setConfirmPass('');
+    setTimeout(() => setPassMsg(''), 4000);
+  };
+
+  // Revoke External Sessions Handler
+  const handleRevokeSessions = () => {
+    setSessions(sessions.filter(s => s.isCurrent));
+    onAddAuditLog('Revoke External Sessions', 'User invalidated 2 active remote session tokens.');
+    setSessionRevokedMsg('All external devices have been logged out successfully.');
+    setTimeout(() => setSessionRevokedMsg(''), 4000);
+  };
+
+  // 2FA TOTP Verification Handler
+  const handleVerify2faSetup = () => {
+    setTotpError('');
+    if (totpInput.trim().length !== 6 || isNaN(parseInt(totpInput))) {
+      setTotpError('Verification code must be 6 numerical digits.');
+      return;
+    }
+    onUpdateUser({ mfaEnabled: true });
+    onAddAuditLog('Enable 2FA Protection', 'User verified TOTP authenticator app and enabled 2-Factor Authentication.');
+    setTotpSuccess('2-Factor Authentication successfully paired & activated!');
+    setTimeout(() => {
+      setShow2faSetup(false);
+      setTotpSuccess('');
+      setTotpInput('');
+    }, 2000);
+  };
+
   const handleInitiatePinReset = () => {
     setResetError('');
     setResetStage('requesting');
@@ -58,8 +171,7 @@ export default function SettingsPanel({
       setCorrectChallengeCode(randomCode);
       setResetStage('verifying');
       onAddAuditLog('Initiate Payout PIN Reset Flow', `Security sentinel dispatched temporary multi-stage email challenge code.`);
-      // Alert/notification preview for demo experience
-      alert(`[Demo Mode Verification Link]\nA security challenge code has been dispatched to: ${user.email}\nCode: ${randomCode}`);
+      alert(`[Demo Mode Security Verification]\nA security challenge code has been dispatched to: ${user.email}\nCode: ${randomCode}`);
     }, 1500);
   };
 
@@ -105,8 +217,12 @@ export default function SettingsPanel({
   // Toggle MFA
   const handleToggleMfa = () => {
     const nextMfa = !user.mfaEnabled;
-    onUpdateUser({ mfaEnabled: nextMfa });
-    onAddAuditLog('Toggle MFA Protection', `User changed Multi-Factor Authentication setting to: ${nextMfa ? 'ENABLED' : 'DISABLED'}`);
+    if (nextMfa) {
+      setShow2faSetup(true);
+    } else {
+      onUpdateUser({ mfaEnabled: false });
+      onAddAuditLog('Toggle MFA Protection', 'User changed Multi-Factor Authentication setting to: DISABLED');
+    }
   };
 
   // Toggle Withdrawal PIN Requirement
@@ -154,8 +270,11 @@ export default function SettingsPanel({
     setTimeout(() => setSettingsSaved(''), 4000);
   };
 
+  // Filter user audit logs
+  const userAuditLogs = auditLogs.filter(log => log.actorId === user.id || log.actorName === user.name);
+
   return (
-    <div className="w-full text-left font-sans">
+    <div className="w-full text-left font-sans space-y-8">
       <AnimatePresence mode="wait">
         
         {/* SECTION 1: PROFILE & KYC */}
@@ -219,161 +338,593 @@ export default function SettingsPanel({
           </motion.div>
         )}
 
-        {/* SECTION 2: SECURITY */}
+        {/* SECTION 2: APP SECURITY SUITE */}
         {activeSection === 'security' && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-6 max-w-2xl`}
+            className="space-y-8"
           >
-            <div>
-              <h3 className="font-display font-bold text-base mb-1">Administrative Security Controls</h3>
-              <p className="text-xs text-slate-500">Configure Multi-Factor Authentication (MFA) and withdrawal lock parameters.</p>
+            {/* Security Posture & Shield Score Banner */}
+            <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative overflow-hidden`}>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex items-center gap-5">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${
+                    securityScore === 100 
+                      ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' 
+                      : 'bg-indigo-500/15 text-indigo-500 border border-indigo-500/30'
+                  }`}>
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-display font-bold text-lg">Account Security Posture</h3>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full ${
+                        securityScore === 100 
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                          : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                      }`}>
+                        {securityScore === 100 ? 'SOVEREIGN PROTECTION (100%)' : `${securityScore}% PROTECTED`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Multi-layered cryptographic defense & transaction guards active on your NexaBank ledger account.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Score Progress Bar */}
+                <div className="w-full md:w-64 space-y-2">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-slate-400">Security Index</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{securityScore}/100</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 dark:bg-zinc-950 rounded-full overflow-hidden p-0.5 border border-slate-200/50 dark:border-zinc-800">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        securityScore === 100 ? 'bg-emerald-500' : securityScore >= 75 ? 'bg-indigo-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${securityScore}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Checklist Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${user.mfaEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-zinc-800 text-slate-400'}`}>
+                    ✓
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">2-Factor Auth (MFA)</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${user.withdrawalPinRequired && user.withdrawalPin ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-zinc-800 text-slate-400'}`}>
+                    ✓
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">Payout Security PIN</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${user.verificationStatus === 'verified' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-zinc-800 text-slate-400'}`}>
+                    ✓
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">KYC Verified</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${user.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-zinc-800 text-slate-400'}`}>
+                    ✓
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">Ledger Status Active</span>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {/* MFA Switch */}
-              <div className="flex justify-between items-center pb-4 border-b border-slate-100/10">
-                <div className="space-y-0.5 text-left">
-                  <span className="text-xs font-semibold block">2-Factor Handshake Verification (MFA)</span>
-                  <p className="text-[10px] text-slate-400 max-w-sm">Requires verification passcode generated in Auth panel during session authorization.</p>
-                </div>
-                <button onClick={handleToggleMfa} className="text-slate-400 hover:text-indigo-500 transition">
-                  {user.mfaEnabled ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10" />}
-                </button>
-              </div>
+            {/* Grid layout for Security Features */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Left Column (7 cols): Administrative Security & Password Change */}
+              <div className="lg:col-span-7 space-y-8">
 
-              {/* Withdrawal PIN toggle Switch */}
-              <div className="flex justify-between items-center pb-4 border-b border-slate-100/10">
-                <div className="space-y-0.5 text-left">
-                  <span className="text-xs font-semibold block">Require Withdrawal CodePIN</span>
-                  <p className="text-[10px] text-slate-400 max-w-sm">Enforces security PIN challenge check prior to logging outbound cash discharge payloads.</p>
-                </div>
-                <button onClick={handleTogglePinRequired} className="text-slate-400 hover:text-indigo-500 transition">
-                  {user.withdrawalPinRequired ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10" />}
-                </button>
-              </div>
-
-              {/* PIN Code Configuration */}
-              <div className="pt-2 space-y-4 text-left border-t border-slate-100/10 mt-4">
-                <div>
-                  <span className="text-xs font-semibold block">Set Withdrawal Security PIN</span>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Type a matching 4-digit code to overwrite the current transactional guard (e.g. 4890).</p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <input
-                    type="password"
-                    placeholder="••••"
-                    maxLength={4}
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    className="w-24 p-2 text-center bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 tracking-widest text-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handlePinSave}
-                    className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90 transition rounded-xl font-medium text-xs font-sans"
-                  >
-                    Save PIN
-                  </button>
-                </div>
-                
-                {pinMsg && (
-                  <p className={`text-[10px] font-sans ${pinMsg.includes('exactly') ? 'text-rose-500' : 'text-emerald-500'}`}>
-                    {pinMsg}
-                  </p>
-                )}
-
-                {/* Multi-stage Payout PIN Reset */}
-                <div className="pt-4 border-t border-slate-150/10 space-y-3">
+                {/* Card 1: 2FA & PIN Controls */}
+                <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-6`}>
                   <div>
-                    <span className="text-xs font-semibold block flex items-center gap-1.5 text-indigo-500 dark:text-emerald-400">
-                      <Lock className="w-3.5 h-3.5" /> Lost or Forgot PIN?
-                    </span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Initiate a multi-stage challenge-response sequence to reset your sovereign payout PIN code securely.</p>
+                    <h4 className="font-display font-bold text-base mb-1 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-indigo-500" /> Administrative Security Controls
+                    </h4>
+                    <p className="text-xs text-slate-500">Configure Multi-Factor Authentication (MFA) and withdrawal security guards.</p>
                   </div>
 
-                  {resetStage === 'idle' && (
-                    <button
-                      type="button"
-                      onClick={handleInitiatePinReset}
-                      className="px-4 py-2 border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/5 transition rounded-xl font-medium text-xs font-sans"
-                    >
-                      Initiate Secure PIN Reset
-                    </button>
-                  )}
-
-                  {resetStage === 'requesting' && (
-                    <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      <span>Generating secure cryptographic challenge...</span>
-                    </div>
-                  )}
-
-                  {resetStage === 'verifying' && (
-                    <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Enter Challenge Code</span>
-                      <p className="text-[10px] text-slate-500">Provide the cryptographic code sent to {user.email}. Check demo-alert if code is missed.</p>
-                      
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="NEXA-XXXX"
-                          value={resetEmailCode}
-                          onChange={(e) => setResetEmailCode(e.target.value)}
-                          className="flex-1 p-2 bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-xs font-mono uppercase tracking-widest text-slate-800 dark:text-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleVerifyPinReset}
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white transition rounded-xl font-medium text-xs font-sans"
-                        >
-                          Verify Code
-                        </button>
+                  <div className="space-y-4">
+                    {/* MFA Switch */}
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-zinc-800">
+                      <div className="space-y-0.5 text-left">
+                        <span className="text-xs font-semibold block">2-Factor Handshake Verification (MFA)</span>
+                        <p className="text-[10px] text-slate-400 max-w-sm">Requires verification passcode generated via TOTP Authenticator during session authorization.</p>
                       </div>
+                      <button onClick={handleToggleMfa} className="text-slate-400 hover:text-indigo-500 transition">
+                        {user.mfaEnabled ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10" />}
+                      </button>
                     </div>
-                  )}
 
-                  {resetStage === 'setting' && (
-                    <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Establish New PIN</span>
+                    {/* Withdrawal PIN toggle Switch */}
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-zinc-800">
+                      <div className="space-y-0.5 text-left">
+                        <span className="text-xs font-semibold block">Require Withdrawal Code PIN</span>
+                        <p className="text-[10px] text-slate-400 max-w-sm">Enforces a 4-digit PIN security challenge check prior to processing outbound cash withdrawals.</p>
+                      </div>
+                      <button onClick={handleTogglePinRequired} className="text-slate-400 hover:text-indigo-500 transition">
+                        {user.withdrawalPinRequired ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10" />}
+                      </button>
+                    </div>
+
+                    {/* PIN Code Configuration */}
+                    <div className="pt-2 space-y-4 text-left border-t border-slate-100 dark:border-zinc-800 mt-4">
+                      <div>
+                        <span className="text-xs font-semibold block">Set Withdrawal Security PIN</span>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Type a matching 4-digit code to set or overwrite your transactional guard (e.g. 4890).</p>
+                      </div>
                       
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <input
                           type="password"
                           placeholder="••••"
                           maxLength={4}
-                          value={newResetPin}
-                          onChange={(e) => setNewResetPin(e.target.value)}
-                          className="w-24 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 tracking-widest text-slate-800 dark:text-white"
+                          value={pin}
+                          onChange={(e) => setPin(e.target.value)}
+                          className="w-24 p-2 text-center bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 tracking-widest text-slate-800 dark:text-white"
                         />
                         <button
                           type="button"
-                          onClick={handleCompletePinReset}
-                          className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white transition rounded-xl font-medium text-xs font-sans"
+                          onClick={handlePinSave}
+                          className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90 transition rounded-xl font-medium text-xs font-sans"
                         >
-                          Reset PIN
+                          Save PIN
+                        </button>
+                      </div>
+                      
+                      {pinMsg && (
+                        <p className={`text-[10px] font-sans ${pinMsg.includes('exactly') ? 'text-rose-500' : 'text-emerald-500'}`}>
+                          {pinMsg}
+                        </p>
+                      )}
+
+                      {/* Multi-stage Payout PIN Reset */}
+                      <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-3">
+                        <div>
+                          <span className="text-xs font-semibold block flex items-center gap-1.5 text-indigo-500 dark:text-emerald-400">
+                            <Lock className="w-3.5 h-3.5" /> Lost or Forgot PIN?
+                          </span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Initiate a multi-stage challenge-response sequence to reset your payout PIN code securely.</p>
+                        </div>
+
+                        {resetStage === 'idle' && (
+                          <button
+                            type="button"
+                            onClick={handleInitiatePinReset}
+                            className="px-4 py-2 border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/5 transition rounded-xl font-medium text-xs font-sans"
+                          >
+                            Initiate Secure PIN Reset
+                          </button>
+                        )}
+
+                        {resetStage === 'requesting' && (
+                          <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                            <span>Generating secure cryptographic challenge...</span>
+                          </div>
+                        )}
+
+                        {resetStage === 'verifying' && (
+                          <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
+                            <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Enter Challenge Code</span>
+                            <p className="text-[10px] text-slate-500">Provide the challenge code sent to {user.email}. Check alert if code is missed.</p>
+                            
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="NEXA-XXXX"
+                                value={resetEmailCode}
+                                onChange={(e) => setResetEmailCode(e.target.value)}
+                                className="flex-1 p-2 bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-xs font-mono uppercase tracking-widest text-slate-800 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleVerifyPinReset}
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white transition rounded-xl font-medium text-xs font-sans"
+                              >
+                                Verify Code
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {resetStage === 'setting' && (
+                          <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-xl">
+                            <span className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Establish New PIN</span>
+                            
+                            <div className="flex gap-2">
+                              <input
+                                type="password"
+                                placeholder="••••"
+                                maxLength={4}
+                                value={newResetPin}
+                                onChange={(e) => setNewResetPin(e.target.value)}
+                                className="w-24 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 tracking-widest text-slate-800 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleCompletePinReset}
+                                className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white transition rounded-xl font-medium text-xs font-sans"
+                              >
+                                Reset PIN
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {resetError && (
+                          <p className="text-[10px] text-rose-500 font-mono mt-1">{resetError}</p>
+                        )}
+                        {resetSuccessMsg && (
+                          <p className="text-[10px] text-emerald-500 font-semibold font-mono mt-1">{resetSuccessMsg}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Password & Passphrase Update */}
+                <form onSubmit={handlePasswordUpdate} className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-5`}>
+                  <div>
+                    <h4 className="font-display font-bold text-base mb-1 flex items-center gap-2">
+                      <Key className="w-4 h-4 text-emerald-500" /> Account Password & Passphrase
+                    </h4>
+                    <p className="text-xs text-slate-500">Update your primary security credential to protect account access.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Current Password */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Current Password</label>
+                      <div className="relative">
+                        <input
+                          type={showCurrentPass ? 'text' : 'password'}
+                          value={currentPass}
+                          onChange={(e) => setCurrentPass(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPass(!showCurrentPass)}
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                        >
+                          {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
+
+                    {/* New Password */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-mono text-slate-400 font-bold block">New Password</label>
+                      <div className="relative">
+                        <input
+                          type={showNewPass ? 'text' : 'password'}
+                          value={newPass}
+                          onChange={(e) => setNewPass(e.target.value)}
+                          placeholder="Min. 6 characters"
+                          className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPass(!showNewPass)}
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                        >
+                          {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      {/* Password Strength Indicator */}
+                      {newPass && (
+                        <div className="pt-2 space-y-1">
+                          <div className="flex justify-between text-[10px] font-mono">
+                            <span className="text-slate-400">Strength Rating:</span>
+                            <span className="font-semibold">{passStrength.label}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${passStrength.color} transition-all duration-300`}
+                              style={{ width: `${passStrength.score}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-mono text-slate-400 font-bold block">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={confirmPass}
+                        onChange={(e) => setConfirmPass(e.target.value)}
+                        placeholder="Re-enter new password"
+                        className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
+
+                    {passError && <p className="text-rose-500 text-[11px] font-semibold">{passError}</p>}
+                    {passMsg && <p className="text-emerald-500 text-[11px] font-semibold">{passMsg}</p>}
+
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold rounded-xl text-xs hover:opacity-90 transition"
+                    >
+                      Update Account Password
+                    </button>
+                  </div>
+                </form>
+
+              </div>
+
+              {/* Right Column (5 cols): Active Sessions & Security Audit Log */}
+              <div className="lg:col-span-5 space-y-8">
+                
+                {/* Active Sessions Manager */}
+                <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-5`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-display font-bold text-base mb-0.5 flex items-center gap-2">
+                        <Laptop className="w-4 h-4 text-indigo-500" /> Active Sessions
+                      </h4>
+                      <p className="text-[11px] text-slate-500">Recognized hardware devices connected to your ledger.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {sessions.map((sess) => (
+                      <div 
+                        key={sess.id}
+                        className={`p-3.5 rounded-2xl border text-xs ${
+                          sess.isCurrent 
+                            ? 'bg-emerald-500/5 border-emerald-500/20' 
+                            : 'bg-slate-50 dark:bg-zinc-950 border-slate-200/60 dark:border-zinc-850'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2.5">
+                            {sess.device.includes('iPhone') ? (
+                              <Smartphone className="w-4 h-4 text-indigo-500 shrink-0" />
+                            ) : (
+                              <Laptop className="w-4 h-4 text-slate-500 shrink-0" />
+                            )}
+                            <div>
+                              <span className="font-semibold block text-slate-900 dark:text-white">{sess.device}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                                IP: {sess.ip} • {sess.location}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {sess.isCurrent ? (
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-bold border border-emerald-500/20">
+                              THIS DEVICE
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-mono text-slate-400">{sess.lastActive}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {sessionRevokedMsg && (
+                    <p className="text-[11px] text-emerald-500 font-semibold font-mono">{sessionRevokedMsg}</p>
                   )}
 
-                  {resetError && (
-                    <p className="text-[10px] text-rose-500 font-mono mt-1">
-                      {resetError}
-                    </p>
-                  )}
-
-                  {resetSuccessMsg && (
-                    <p className="text-[10px] text-emerald-500 font-semibold font-mono mt-1">
-                      {resetSuccessMsg}
-                    </p>
+                  {sessions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={handleRevokeSessions}
+                      className="w-full py-2.5 px-4 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Revoke All Other Sessions
+                    </button>
                   )}
                 </div>
+
+                {/* Threat & Security Alert Toggles */}
+                <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-4`}>
+                  <div>
+                    <h4 className="font-display font-bold text-base mb-1 flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-amber-500" /> Fraud Defense & Alerts
+                    </h4>
+                    <p className="text-xs text-slate-500">Automated sentinel defense rules for account activity.</p>
+                  </div>
+
+                  <div className="space-y-3 pt-2 text-xs">
+                    <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <span className="font-semibold block">New Device Sign-In Alert</span>
+                        <span className="text-[10px] text-slate-400">Email alert on unrecognized hardware logins</span>
+                      </div>
+                      <button 
+                        onClick={() => setSecAlerts({...secAlerts, loginAlerts: !secAlerts.loginAlerts})}
+                        className="text-slate-400 hover:text-indigo-500 transition"
+                      >
+                        {secAlerts.loginAlerts ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8" />}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <span className="font-semibold block">High-Value Transfer Lock</span>
+                        <span className="text-[10px] text-slate-400">Secondary approval required for transfers &gt; $5,000</span>
+                      </div>
+                      <button 
+                        onClick={() => setSecAlerts({...secAlerts, highValLock: !secAlerts.highValLock})}
+                        className="text-slate-400 hover:text-indigo-500 transition"
+                      >
+                        {secAlerts.highValLock ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8" />}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2">
+                      <div>
+                        <span className="font-semibold block">Auto Session Timeout</span>
+                        <span className="text-[10px] text-slate-400">Auto lock workspace after 15 min idle</span>
+                      </div>
+                      <button 
+                        onClick={() => setSecAlerts({...secAlerts, autoTimeout: !secAlerts.autoTimeout})}
+                        className="text-slate-400 hover:text-indigo-500 transition"
+                      >
+                        {secAlerts.autoTimeout ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Security Activity Trail */}
+                <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} space-y-4`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-display font-bold text-base mb-0.5 flex items-center gap-2">
+                        <History className="w-4 h-4 text-emerald-500" /> Security Audit Log
+                      </h4>
+                      <p className="text-[11px] text-slate-500">Your recent security events & access logs.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs">
+                    {userAuditLogs.length > 0 ? (
+                      userAuditLogs.slice(0, 5).map((log) => (
+                        <div key={log.id} className="p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-150/50 dark:border-zinc-850 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[11px] text-slate-900 dark:text-zinc-200">{log.action}</span>
+                            <span className="text-[9px] font-mono text-slate-400">
+                              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 line-clamp-1">{log.details}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-150/50 dark:border-zinc-850 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[11px] text-emerald-500">Secure Session Authorized</span>
+                            <span className="text-[9px] font-mono text-slate-400">Just Now</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500">Encrypted JWT session handshake verified with primary custody ledger node.</p>
+                        </div>
+                        <div className="p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-150/50 dark:border-zinc-850 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[11px] text-slate-900 dark:text-zinc-200">2FA Policy Check</span>
+                            <span className="text-[9px] font-mono text-slate-400">Today, 08:30</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500">Device fingerprint & MFA state verified clean.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
+
             </div>
+
+            {/* 2FA Authenticator Modal Setup */}
+            <AnimatePresence>
+              {show2faSetup && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className={`w-full max-w-md p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-xl text-slate-900'} space-y-5 text-left`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="w-5 h-5 text-indigo-500" />
+                        <h4 className="font-display font-bold text-base">Pair Authenticator App</h4>
+                      </div>
+                      <button
+                        onClick={() => setShow2faSetup(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-slate-500">
+                      Scan the QR code below using Google Authenticator, Authy, or 1Password to generate 2FA passcodes.
+                    </p>
+
+                    {/* QR Code Graphic Container */}
+                    <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2">
+                      <div className="w-36 h-36 bg-slate-900 p-2.5 rounded-xl flex items-center justify-center relative shadow-inner">
+                        <div className="grid grid-cols-6 grid-rows-6 gap-1.5 w-full h-full">
+                          {Array.from({ length: 36 }).map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`rounded-sm ${
+                                (i * 7) % 3 === 0 || i % 5 === 0 ? 'bg-emerald-400' : (i * 11) % 4 === 0 ? 'bg-white' : 'bg-zinc-800'
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="font-mono text-[10px] text-slate-500 dark:text-zinc-400 font-bold tracking-widest">
+                        SECRET: NEXA-8842-7719-2041
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase font-mono text-slate-400 font-bold block">
+                        Enter 6-Digit Authenticator Code
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={totpInput}
+                        onChange={(e) => setTotpInput(e.target.value)}
+                        className="w-full p-3 text-center bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-mono text-base tracking-widest text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                      {totpError && <p className="text-rose-500 text-[11px] font-semibold">{totpError}</p>}
+                      {totpSuccess && <p className="text-emerald-500 text-[11px] font-semibold">{totpSuccess}</p>}
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShow2faSetup(false)}
+                        className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleVerify2faSetup}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-md"
+                      >
+                        Verify &amp; Activate 2FA
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
           </motion.div>
         )}
 
@@ -454,3 +1005,4 @@ export default function SettingsPanel({
     </div>
   );
 }
+
