@@ -25,10 +25,28 @@ const MAJOR_US_BANKS = [
   'Fifth Third'
 ];
 
-const cryptoWallets = {
-  BTC: 'bc1q3az2amlwrsn4szz3myxehjzf6qxdkhxm9jz4yt',
-  'ETH/USDT': '0xBd512D38791943164048D14Eb487E47f7C039fe2',
-  SOL: 'Gzd2KNHaWbkSUnZvBtrMZT6oUWvnEFtFLNVo5d9N5WJ7'
+const cryptoWallets: Record<string, { name: string; symbol: string; network: string; address: string; badge: string }> = {
+  BTC: {
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    network: 'Bitcoin Native (SegWit)',
+    address: 'bc1q3az2amlwrsn4szz3myxehjzf6qxdkhxm9jz4yt',
+    badge: 'BTC'
+  },
+  ETH: {
+    name: 'Ethereum',
+    symbol: 'ETH',
+    network: 'Ethereum Mainnet (ERC-20)',
+    address: '0xBd512D38791943164048D14Eb487E47f7C039fe2',
+    badge: 'ERC-20'
+  },
+  USDT: {
+    name: 'Tether USDT',
+    symbol: 'USDT',
+    network: 'TRON / Ethereum (TRC-20 / ERC-20)',
+    address: '0xBd512D38791943164048D14Eb487E47f7C039fe2',
+    badge: 'TRC-20'
+  }
 };
 
 export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithdrawal, isDarkMode }: DepositWithdrawProps) {
@@ -425,47 +443,151 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                 )}
 
                 {depMethod === 'crypto_usdt' && (
-                  <div className="flex flex-col sm:flex-row items-center gap-4 text-xs text-slate-600 dark:text-zinc-400">
-                    {/* Compliance QR Reference */}
-                    <div className="w-24 h-24 bg-white p-2 rounded-xl flex items-center justify-center border border-slate-200 shrink-0">
-                      <div className="grid grid-cols-4 grid-rows-4 gap-1 w-full h-full opacity-70">
-                        {Array.from({ length: 16 }).map((_, i) => (
-                          <div key={i} className={`rounded-sm ${i % 3 === 0 ? 'bg-black' : 'bg-transparent'}`} />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-2">
+                  <div className="space-y-4 text-xs text-slate-600 dark:text-zinc-400">
+                    <div className="flex items-center justify-between">
                       <span className="font-semibold text-[10px] uppercase font-mono tracking-widest text-emerald-500 block">
-                        USDT Stablecoin (TRC-20 Network)
+                        CHOOSE CRYPTOCURRENCY NETWORK
                       </span>
-                      <p className="text-[11px]">Deploy matching USD amounts to the designated stable wallet below.</p>
-                      <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-850 p-2 rounded-xl">
-                        <div className="space-y-3">
-                          <select 
-                            value={selectedCryptoNetwork}
-                            onChange={(e) => setSelectedCryptoNetwork(e.target.value)}
-                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                          >
-                            <option value="BTC">Bitcoin (BTC)</option>
-                            <option value="ETH/USDT">Ethereum (ETH/USDT)</option>
-                            <option value="SOL">Solana (SOL)</option>
-                          </select>
-                          
-                          <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-900 p-3 rounded-xl">
-                            <span className="font-mono text-[10px] text-slate-600 dark:text-zinc-400 truncate flex-1">
-                              {cryptoWallets[selectedCryptoNetwork as keyof typeof cryptoWallets]}
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Instant Deposit
+                      </span>
+                    </div>
+
+                    {/* Network Selector Cards */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCryptoNetwork('BTC')}
+                        className={`p-3 rounded-xl border text-left transition flex flex-col items-start justify-between gap-2 ${
+                          selectedCryptoNetwork === 'BTC'
+                            ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-semibold ring-1 ring-amber-500/30'
+                            : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-500 hover:border-slate-300 dark:hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-xs">
+                            ₿
+                          </div>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-semibold">
+                            BTC
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold block text-slate-900 dark:text-white">Bitcoin</span>
+                          <span className="text-[9px] text-slate-400 block font-mono">Native</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCryptoNetwork('ETH')}
+                        className={`p-3 rounded-xl border text-left transition flex flex-col items-start justify-between gap-2 ${
+                          selectedCryptoNetwork === 'ETH'
+                            ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500 font-semibold ring-1 ring-indigo-500/30'
+                            : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-500 hover:border-slate-300 dark:hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-500 flex items-center justify-center font-bold text-xs">
+                            Ξ
+                          </div>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-500 font-semibold">
+                            ERC-20
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold block text-slate-900 dark:text-white">Ethereum</span>
+                          <span className="text-[9px] text-slate-400 block font-mono">ETH</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCryptoNetwork('USDT')}
+                        className={`p-3 rounded-xl border text-left transition flex flex-col items-start justify-between gap-2 ${
+                          selectedCryptoNetwork === 'USDT'
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-semibold ring-1 ring-emerald-500/30'
+                            : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-500 hover:border-slate-300 dark:hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-xs">
+                            ₮
+                          </div>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold">
+                            TRC-20
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold block text-slate-900 dark:text-white">Tether</span>
+                          <span className="text-[9px] text-slate-400 block font-mono">USDT</span>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Active Selected Crypto Details & Prompted Wallet Address */}
+                    {(() => {
+                      const activeCrypto = cryptoWallets[selectedCryptoNetwork] || cryptoWallets.BTC;
+                      return (
+                        <div className="p-4 bg-white dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 rounded-2xl space-y-3 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="font-semibold text-xs text-slate-900 dark:text-white">
+                                {activeCrypto.name} ({activeCrypto.symbol}) Vault
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500">
+                              Network: {activeCrypto.network}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => navigator.clipboard.writeText(cryptoWallets[selectedCryptoNetwork as keyof typeof cryptoWallets])}
-                              className="p-1.5 text-slate-400 hover:text-emerald-500 transition"
-                            >
-                              <Clipboard className="w-4 h-4" />
-                            </button>
+                          </div>
+
+                          {/* Address Box & Copy */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
+                              Deposit Wallet Address
+                            </label>
+                            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                              <span className="font-mono text-xs text-slate-900 dark:text-emerald-400 font-semibold break-all flex-1 select-all">
+                                {activeCrypto.address}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(activeCrypto.address);
+                                  setCopied(true);
+                                  setTimeout(() => setCopied(false), 2500);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shrink-0 ${
+                                  copied
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                                }`}
+                              >
+                                {copied ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clipboard className="w-3.5 h-3.5" />
+                                    <span>Copy Address</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 bg-slate-50/50 dark:bg-zinc-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-zinc-850">
+                            <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>
+                              Send only <strong>{activeCrypto.symbol}</strong> using <strong>{activeCrypto.network}</strong> to this address. Funds reflect after network confirmations.
+                            </span>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
 
