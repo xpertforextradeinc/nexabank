@@ -4,7 +4,8 @@ import {
   Shield, Check, Award, ToggleLeft, ToggleRight, Lock, Key, AlertCircle, 
   Upload, CheckCircle2, Moon, Sun, ClipboardCheck, Settings, Eye, EyeOff, Info,
   ShieldCheck, ShieldAlert, Smartphone, Laptop, Globe, RefreshCw, Terminal,
-  History, QrCode, LogOut, Bell, AlertTriangle
+  History, QrCode, LogOut, Bell, AlertTriangle, Pencil, User, Mail, Phone,
+  Calendar, MapPin, Briefcase, Camera, UserCheck, X, Save, UserCog, Loader2
 } from 'lucide-react';
 import { UserProfile, AuditLog } from '../types';
 import KYCWizard from './KYCWizard';
@@ -82,6 +83,104 @@ export default function SettingsPanel({
   const [newResetPin, setNewResetPin] = useState('');
   const [resetError, setResetError] = useState('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState('');
+
+  // Edit Profile Modal States
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState(user.name || '');
+  const [editMiddleName, setEditMiddleName] = useState(user.middleName || '');
+  const [editEmail, setEditEmail] = useState(user.email || '');
+  const [editPhone, setEditPhone] = useState(user.phone || '');
+  const [editDob, setEditDob] = useState(user.dateOfBirth || '');
+  const [editGender, setEditGender] = useState(user.gender || 'Prefer not to say');
+  const [editAddress, setEditAddress] = useState(user.residentialAddress || '');
+  const [editCity, setEditCity] = useState(user.city || '');
+  const [editState, setEditState] = useState(user.stateProvince || '');
+  const [editCountry, setEditCountry] = useState(user.country || '');
+  const [editZip, setEditZip] = useState(user.zipPostalCode || '');
+  const [editOccupation, setEditOccupation] = useState(user.occupation || '');
+  const [editEmployer, setEditEmployer] = useState(user.employer || '');
+  const [editAvatar, setEditAvatar] = useState(user.avatar || '');
+  const [editProfileMsg, setEditProfileMsg] = useState('');
+  const [editProfileError, setEditProfileError] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const AVATAR_PRESETS = [
+    { id: 'av1', label: 'Executive Male', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120' },
+    { id: 'av2', label: 'Professional Woman', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120' },
+    { id: 'av3', label: 'Corporate Executive', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=120' },
+    { id: 'av4', label: 'Tech Specialist', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120' },
+    { id: 'av5', label: 'Modern Professional', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120' }
+  ];
+
+  const handleOpenEditProfileModal = () => {
+    setEditName(user.name || '');
+    setEditMiddleName(user.middleName || '');
+    setEditEmail(user.email || '');
+    setEditPhone(user.phone || '');
+    setEditDob(user.dateOfBirth || '');
+    setEditGender(user.gender || 'Prefer not to say');
+    setEditAddress(user.residentialAddress || '');
+    setEditCity(user.city || '');
+    setEditState(user.stateProvince || '');
+    setEditCountry(user.country || '');
+    setEditZip(user.zipPostalCode || '');
+    setEditOccupation(user.occupation || '');
+    setEditEmployer(user.employer || '');
+    setEditAvatar(user.avatar || '');
+    setEditProfileMsg('');
+    setEditProfileError('');
+    setShowEditProfileModal(true);
+  };
+
+  const handleSaveProfileDetails = (e: FormEvent) => {
+    e.preventDefault();
+    setEditProfileError('');
+    setEditProfileMsg('');
+
+    if (!editName.trim() || editName.trim().length < 2) {
+      setEditProfileError('Full Name must be at least 2 characters long.');
+      return;
+    }
+
+    if (!editEmail.trim() || !editEmail.includes('@')) {
+      setEditProfileError('A valid email address is required.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+
+    const updatedData: Partial<UserProfile> = {
+      name: editName.trim(),
+      middleName: editMiddleName.trim(),
+      email: editEmail.trim(),
+      phone: editPhone.trim(),
+      dateOfBirth: editDob,
+      gender: editGender,
+      residentialAddress: editAddress.trim(),
+      city: editCity.trim(),
+      stateProvince: editState.trim(),
+      country: editCountry.trim(),
+      zipPostalCode: editZip.trim(),
+      occupation: editOccupation.trim(),
+      employer: editEmployer.trim(),
+      avatar: editAvatar.trim() || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120'
+    };
+
+    onUpdateUser(updatedData);
+    onAddAuditLog(
+      'Update Personal Profile Details',
+      `User updated details: Name (${editName.trim()}), Phone (${editPhone.trim()}), Email (${editEmail.trim()}), DOB (${editDob}).`
+    );
+
+    setTimeout(() => {
+      setIsSavingProfile(false);
+      setEditProfileMsg('Profile details successfully updated!');
+      setTimeout(() => {
+        setShowEditProfileModal(false);
+        setEditProfileMsg('');
+      }, 1200);
+    }, 400);
+  };
 
   // Security Health Calculation
   const calculateSecurityScore = () => {
@@ -287,15 +386,38 @@ export default function SettingsPanel({
           >
             {/* Profile Summary Card (5 cols) */}
             <div className={`lg:col-span-5 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative`}>
+              
+              {/* Top-Right Edit Profile Icon Button */}
+              <button
+                onClick={handleOpenEditProfileModal}
+                className="absolute top-5 right-5 p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-indigo-500/20 shadow-sm"
+                title="Update Personal Details"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Edit Profile</span>
+              </button>
+
               <div className="flex flex-col items-center text-center">
-                <div className="relative mb-4">
+                <div className="relative mb-4 group cursor-pointer" onClick={handleOpenEditProfileModal}>
                   <img
                     src={user.avatar}
                     alt={user.name}
                     referrerPolicy="no-referrer"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500 p-0.5"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500 p-0.5 shadow-md"
                   />
-                  <span className={`absolute bottom-0 right-0 px-2.5 py-0.5 text-[9px] font-mono font-bold rounded-full border ${
+                  <div className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition shadow-sm border border-white dark:border-zinc-900" title="Change Avatar">
+                    <Camera className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <h3 className="font-display font-bold text-base flex items-center gap-1.5 justify-center">
+                  {user.name}
+                  {user.isUpgraded && <Award className="w-4 h-4 text-indigo-500" />}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>
+                
+                <div className="mt-2.5">
+                  <span className={`px-2.5 py-0.5 text-[9px] font-mono font-bold rounded-full border ${
                     user.verificationStatus === 'verified'
                       ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                       : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
@@ -304,18 +426,63 @@ export default function SettingsPanel({
                   </span>
                 </div>
 
-                <h3 className="font-display font-bold text-base flex items-center gap-1.5 justify-center">
-                  {user.name}
-                  {user.isUpgraded && <Award className="w-4 h-4 text-indigo-500" />}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>
                 <span className="inline-block mt-3 px-3 py-1 bg-slate-100 dark:bg-zinc-950 rounded-full font-mono text-[9px] text-slate-500 dark:text-zinc-400">
                   LEDGER MEMBER SINCE: {user.joinedDate.toUpperCase()}
                 </span>
               </div>
 
-              <div className="mt-6 pt-5 border-t border-slate-100/10 space-y-3.5">
-                <div className="flex justify-between text-xs">
+              {/* Personal Details Breakdown List */}
+              <div className="mt-6 pt-5 border-t border-slate-100 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-indigo-400" /> Phone:
+                  </span>
+                  <span className="font-mono font-medium text-slate-800 dark:text-zinc-200">
+                    {user.phone || 'Not set'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Birth:
+                  </span>
+                  <span className="font-mono font-medium text-slate-800 dark:text-zinc-200">
+                    {user.dateOfBirth || 'Not set'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400" /> Address:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-zinc-200 truncate max-w-[190px]" title={[user.residentialAddress, user.city, user.country].filter(Boolean).join(', ')}>
+                    {[user.residentialAddress, user.city, user.country].filter(Boolean).join(', ') || 'Not set'}
+                  </span>
+                </div>
+
+                {user.gender && user.gender !== 'Prefer not to say' && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-indigo-400" /> Gender:
+                    </span>
+                    <span className="font-medium text-slate-800 dark:text-zinc-200 capitalize">
+                      {user.gender}
+                    </span>
+                  </div>
+                )}
+
+                {(user.occupation || user.employer) && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-indigo-400" /> Occupation:
+                    </span>
+                    <span className="font-medium text-slate-800 dark:text-zinc-200 truncate max-w-[180px]">
+                      {user.occupation || ''} {user.employer ? `(${user.employer})` : ''}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-xs pt-2 border-t border-slate-100 dark:border-zinc-800">
                   <span className="text-slate-400">Authority Role:</span>
                   <span className="font-mono font-bold capitalize text-slate-800 dark:text-zinc-300">{user.role}</span>
                 </div>
@@ -324,6 +491,15 @@ export default function SettingsPanel({
                   <span className="font-mono font-semibold capitalize text-emerald-500">{user.status}</span>
                 </div>
               </div>
+
+              {/* Bottom Quick Action Edit Button */}
+              <button
+                onClick={handleOpenEditProfileModal}
+                className="w-full mt-5 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <Pencil className="w-4 h-4 text-indigo-400" />
+                <span>Update Personal Details</span>
+              </button>
             </div>
 
             {/* KYC Upload (7 cols) */}
@@ -1001,6 +1177,343 @@ export default function SettingsPanel({
           </motion.div>
         )}
 
+      </AnimatePresence>
+
+      {/* EDIT PROFILE MODAL DIALOG */}
+      <AnimatePresence>
+        {showEditProfileModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowEditProfileModal(false);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className={`relative w-full max-w-2xl rounded-3xl border ${
+                isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-2xl text-slate-900'
+              } p-6 sm:p-8 my-auto space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar text-left`}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center border border-indigo-500/20">
+                    <UserCog className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg leading-snug">Update Profile Details</h3>
+                    <p className="text-xs text-slate-400">Modify your legal identity, contact details, date of birth & address.</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveProfileDetails} className="space-y-6">
+
+                {/* Avatar Preset & Custom Selection */}
+                <div className="space-y-3 p-4 rounded-2xl bg-slate-50/70 dark:bg-zinc-950/50 border border-slate-100 dark:border-zinc-800">
+                  <label className="text-[10px] uppercase font-mono font-bold text-slate-400 block tracking-wider">
+                    Profile Picture / Avatar
+                  </label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {AVATAR_PRESETS.map((av) => (
+                      <button
+                        key={av.id}
+                        type="button"
+                        onClick={() => setEditAvatar(av.url)}
+                        className={`relative rounded-full transition-transform cursor-pointer ${
+                          editAvatar === av.url ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-zinc-950 scale-105' : 'opacity-70 hover:opacity-100'
+                        }`}
+                        title={av.label}
+                      >
+                        <img src={av.url} alt={av.label} className="w-10 h-10 rounded-full object-cover" />
+                        {editAvatar === av.url && (
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px]">
+                            ✓
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="text-[10px] text-slate-400 font-mono block mb-1">Or enter custom avatar image URL:</label>
+                    <input
+                      type="url"
+                      value={editAvatar}
+                      onChange={(e) => setEditAvatar(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full px-3.5 py-2 text-xs bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 1: Core Credentials (Name, Middle, Email, Phone) */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-mono font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" /> Identity & Contact Credentials
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Full Name <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="e.g. Wentworth Luckman"
+                          className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Middle Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={editMiddleName}
+                        onChange={(e) => setEditMiddleName(e.target.value)}
+                        placeholder="e.g. Hassan"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Email Address <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          required
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="name@domain.com"
+                          className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="tel"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="+1 (555) 019-2831"
+                          className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Birth & Demographics */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-mono font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" /> Date of Birth & Demographics
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={editDob}
+                        onChange={(e) => setEditDob(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Gender Designation
+                      </label>
+                      <select
+                        value={editGender}
+                        onChange={(e) => setEditGender(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Non-Binary">Non-Binary</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Physical Address */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-mono font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" /> Residential Location Details
+                  </h4>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Street Address
+                      </label>
+                      <input
+                        type="text"
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        placeholder="e.g. 742 Evergreen Terrace"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">City</label>
+                        <input
+                          type="text"
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          placeholder="New York"
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">State / Prov.</label>
+                        <input
+                          type="text"
+                          value={editState}
+                          onChange={(e) => setEditState(e.target.value)}
+                          placeholder="NY"
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Country</label>
+                        <input
+                          type="text"
+                          value={editCountry}
+                          onChange={(e) => setEditCountry(e.target.value)}
+                          placeholder="United States"
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Zip / Postal</label>
+                        <input
+                          type="text"
+                          value={editZip}
+                          onChange={(e) => setEditZip(e.target.value)}
+                          placeholder="10001"
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Professional Info */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-mono font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5" /> Employment & Professional Data
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Occupation</label>
+                      <input
+                        type="text"
+                        value={editOccupation}
+                        onChange={(e) => setEditOccupation(e.target.value)}
+                        placeholder="e.g. Senior Software Engineer"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Employer</label>
+                      <input
+                        type="text"
+                        value={editEmployer}
+                        onChange={(e) => setEditEmployer(e.target.value)}
+                        placeholder="e.g. Nexa Capital Global"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feedback Messages */}
+                {editProfileError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{editProfileError}</span>
+                  </div>
+                )}
+
+                {editProfileMsg && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{editProfileMsg}</span>
+                  </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditProfileModal(false)}
+                    className="px-5 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving Changes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Profile Details</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

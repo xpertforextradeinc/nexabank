@@ -48,6 +48,11 @@ export interface UserProfile {
   
   // Admin Assigned Crypto Wallet
   assignedCryptoWallet?: string;
+  
+  // Withdrawal PIN Request & Status
+  pinRequested?: boolean;
+  pinRequestDate?: string;
+  pinStatus?: 'none' | 'requested' | 'issued' | 'rejected';
 }
 
 export interface Wallet {

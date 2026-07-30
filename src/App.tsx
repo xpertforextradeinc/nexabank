@@ -5,7 +5,7 @@ import {
   RefreshCw, BarChart3, TrendingUp, Settings, History, Send, ArrowUpRight, 
   ArrowDownRight, Wallet as WalletIcon, User, Menu, X, Award, Eye, Key, AlertTriangle, 
   CreditCard as CardIcon, ShieldAlert, ListFilter, Users as UsersIcon, Database, Terminal,
-  LayoutDashboard, Landmark, FileText, Activity, Search, Info, Check, ClipboardList
+  LayoutDashboard, Landmark, FileText, Activity, Search, Info, Check, ClipboardList, Pencil
 } from 'lucide-react';
 
 import { 
@@ -80,7 +80,11 @@ function mapProfileFromDB(db: any): UserProfile {
     taxAddress: db.tax_address,
     taxSubmitted: db.tax_submitted,
     // Admin Assigned Crypto Wallet
-    assignedCryptoWallet: db.assigned_crypto_wallet
+    assignedCryptoWallet: db.assigned_crypto_wallet,
+    // Withdrawal PIN Requests
+    pinRequested: db.pin_requested,
+    pinRequestDate: db.pin_request_date,
+    pinStatus: db.pin_status || (db.withdrawal_pin ? 'issued' : (db.pin_requested ? 'requested' : 'none'))
   };
 }
 
@@ -98,6 +102,9 @@ function mapProfileToDB(p: Partial<UserProfile>): any {
   if (p.verificationStatus !== undefined) db.verification_status = p.verificationStatus;
   if (p.avatar !== undefined) db.avatar = p.avatar;
   if (p.withdrawalsLocked !== undefined) db.withdrawals_locked = p.withdrawalsLocked;
+  if (p.pinRequested !== undefined) db.pin_requested = p.pinRequested;
+  if (p.pinRequestDate !== undefined) db.pin_request_date = p.pinRequestDate;
+  if (p.pinStatus !== undefined) db.pin_status = p.pinStatus;
   // Onboarding fields mapping to database
   if (p.middleName !== undefined) db.middle_name = p.middleName;
   if (p.dateOfBirth !== undefined) db.date_of_birth = p.dateOfBirth;
@@ -777,6 +784,12 @@ export default function App() {
   // USER ACTION: Basic Profiles settings updates
   const handleUpdateUser = async (updatedFields: Partial<UserProfile>) => {
     if (!currentUser) return;
+    
+    // Optimistic local update for instantaneous UI reactivity
+    const nextUser = { ...currentUser, ...updatedFields };
+    setCurrentUser(nextUser);
+    setUsers(prevUsers => prevUsers.map(u => u.id === currentUser.id ? { ...u, ...updatedFields } : u));
+
     const dbUpdates = mapProfileToDB(updatedFields);
     const { error } = await supabase.from('profiles').update(dbUpdates).eq('id', currentUser.id);
     if (error) {
@@ -1646,21 +1659,30 @@ export default function App() {
           </div>
 
           {/* User / Officer Info Segment */}
-          <div className={`p-4 rounded-2xl border flex items-center gap-3.5 ${
-            isDarkMode ? 'bg-zinc-900/50 border-zinc-800' : 'bg-slate-50/50 border-slate-100 shadow-sm'
-          }`}>
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              referrerPolicy="no-referrer"
-              className="w-10 h-10 rounded-full object-cover border border-slate-200/50 shrink-0"
-            />
-            <div className="min-w-0">
-              <span className="text-xs font-bold block truncate">{currentUser.name}</span>
-              <span className="text-[10px] font-mono text-slate-400 block truncate -mt-0.5">{currentUser.email}</span>
-              <span className="text-[8px] font-mono font-bold text-emerald-500 block uppercase mt-1">
-                ● STATUS: {currentUser.status.toUpperCase()}
-              </span>
+          <div 
+            onClick={() => handleMenuSelection('profile')}
+            className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-500/40 transition group ${
+              isDarkMode ? 'bg-zinc-900/50 border-zinc-800' : 'bg-slate-50/50 border-slate-100 shadow-sm'
+            }`}
+            title="Click to view & update personal details"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                referrerPolicy="no-referrer"
+                className="w-9 h-9 rounded-full object-cover border border-slate-200/50 shrink-0 group-hover:scale-105 transition"
+              />
+              <div className="min-w-0">
+                <span className="text-xs font-bold block truncate group-hover:text-indigo-500 transition">{currentUser.name}</span>
+                <span className="text-[10px] font-mono text-slate-400 block truncate -mt-0.5">{currentUser.email}</span>
+                <span className="text-[8px] font-mono font-bold text-emerald-500 block uppercase mt-0.5">
+                  ● STATUS: {currentUser.status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div className="p-1.5 rounded-lg text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-500/10 transition shrink-0" title="Update Profile Details">
+              <Pencil className="w-3.5 h-3.5" />
             </div>
           </div>
 
@@ -1951,6 +1973,7 @@ export default function App() {
             onAddDeposit={handleAddDeposit}
             onAddWithdrawal={handleAddWithdrawal}
             isDarkMode={isDarkMode}
+            onUpdateUser={handleUpdateUser}
           />
         ) : null;
 
@@ -1962,6 +1985,7 @@ export default function App() {
             onAddDeposit={handleAddDeposit}
             onAddWithdrawal={handleAddWithdrawal}
             isDarkMode={isDarkMode}
+            onUpdateUser={handleUpdateUser}
           />
         ) : null;
 

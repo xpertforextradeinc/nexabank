@@ -11,6 +11,7 @@ interface DepositWithdrawProps {
   onAddDeposit: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'credit_card') => void;
   onAddWithdrawal: (amount: number, method: 'bank_wire' | 'crypto_usdt' | 'cash_app' | 'zelle' | 'venmo', pin?: string, payload?: any) => string | null | Promise<string | null>; // returns error message if any
   isDarkMode: boolean;
+  onUpdateUser?: (fields: Partial<UserProfile>) => void;
 }
 
 const MAJOR_US_BANKS = [
@@ -49,8 +50,28 @@ const cryptoWallets: Record<string, { name: string; symbol: string; network: str
   }
 };
 
-export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithdrawal, isDarkMode }: DepositWithdrawProps) {
+export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithdrawal, isDarkMode, onUpdateUser }: DepositWithdrawProps) {
   const [activeAction, setActiveAction] = useState<'deposit' | 'withdraw'>('deposit');
+  
+  // PIN Request States
+  const hasIssuedPin = Boolean(user.withdrawalPin || user.pinStatus === 'issued');
+  const isPinRequested = Boolean(user.pinRequested || user.pinStatus === 'requested');
+  const [requestingPin, setRequestingPin] = useState(false);
+  const [pinReqMsg, setPinReqMsg] = useState('');
+
+  const handleRequestPinFromAdmin = async () => {
+    setRequestingPin(true);
+    const updates: Partial<UserProfile> = {
+      pinRequested: true,
+      pinRequestDate: new Date().toISOString(),
+      pinStatus: 'requested'
+    };
+    if (onUpdateUser) {
+      await onUpdateUser(updates);
+    }
+    setRequestingPin(false);
+    setPinReqMsg('Withdrawal PIN application submitted to administration! Please allow brief clearance time for admin approval.');
+  };
   
   // Deposit States
   const [depAmount, setDepAmount] = useState('');
@@ -191,7 +212,12 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }
 
     // Check withdrawal PIN requirement
-    if (user.withdrawalPinRequired) {
+    if (!hasIssuedPin) {
+      setError('Withdrawal Security PIN Required: You have not been issued a Withdrawal PIN by Bank Administration yet. Please click "Apply / Request Withdrawal PIN from Admin" below.');
+      return;
+    }
+
+    if (user.withdrawalPinRequired || user.withdrawalPin) {
       if (!enteredPin) {
         setError('Security code (Withdrawal PIN) is required to approve this payout.');
         return;
@@ -959,9 +985,42 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                 </div>
               )}
 
-              {/* Withdrawal PIN overlay if required */}
-              {user.withdrawalPinRequired && (
-                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3">
+              {/* Withdrawal PIN overlay & Access Request UI */}
+              {!hasIssuedPin ? (
+                <div className="p-5 bg-amber-500/10 border border-amber-500/25 rounded-2xl space-y-3 text-left">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-amber-500 shrink-0" />
+                    <span className="font-display font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Withdrawal Security Authorization PIN Required
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
+                    You have not been issued an admin-approved Withdrawal Security PIN yet. All outbound cash & crypto payouts require a 4-digit security PIN issued by Bank Administration. If this is your first time attempting to withdraw, please apply or request access below.
+                  </p>
+
+                  {isPinRequested ? (
+                    <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0 text-amber-500" />
+                      <span>Withdrawal PIN Application Submitted (Awaiting Bank Admin Approval)</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={requestingPin}
+                      onClick={handleRequestPinFromAdmin}
+                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 transition hover:scale-102 active:scale-98 shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {requestingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                      Apply / Request Withdrawal PIN from Admin
+                    </button>
+                  )}
+
+                  {pinReqMsg && (
+                    <p className="text-emerald-500 font-semibold text-xs mt-1">{pinReqMsg}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3 text-left">
                   <div className="flex items-center gap-2">
                     <Key className="w-4 h-4 text-amber-500" />
                     <span className="font-display font-semibold text-[11px] text-amber-500 uppercase tracking-wider">
@@ -969,7 +1028,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    A security policy requires you to input your 4-digit Withdrawal PIN (Your PIN: **{user.withdrawalPin || '4890'}**).
+                    Input your 4-digit Withdrawal PIN to authorize this discharge (PIN Assigned: **{user.withdrawalPin || '••••'}**).
                   </p>
                   <input
                     type="password"

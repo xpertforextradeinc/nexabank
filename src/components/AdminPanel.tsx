@@ -100,6 +100,7 @@ export default function AdminPanel({
   const [liveEvents, setLiveEvents] = useState<{id: string, text: string, time: string}[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [viewUserDetail, setViewUserDetail] = useState<UserProfile | null>(null);
+  const [adminPinInput, setAdminPinInput] = useState('4890');
 
   useEffect(() => {
     const channel = supabase.channel('admin_live_feed')
@@ -211,9 +212,14 @@ export default function AdminPanel({
 
   const handleGeneratePin = (user: UserProfile) => {
     const newPin = Math.floor(1000 + Math.random() * 9000).toString();
-    onUpdateUserDetails(user.id, { withdrawalPin: newPin });
+    onUpdateUserDetails(user.id, {
+      withdrawalPin: newPin,
+      withdrawalPinRequired: true,
+      pinRequested: false,
+      pinStatus: 'issued'
+    });
     if (selectedUser?.id === user.id) {
-      onSelectUser({ ...selectedUser, withdrawalPin: newPin });
+      onSelectUser({ ...selectedUser, withdrawalPin: newPin, withdrawalPinRequired: true, pinRequested: false, pinStatus: 'issued' });
     }
     // Record audit log directly
     getSupabase().from('audit_logs').insert({
@@ -224,7 +230,86 @@ export default function AdminPanel({
       target_user_name: user.name,
       details: `Generated secure numerical withdrawal authorization PIN (${newPin}) for user.`
     }).then(() => {});
-    alert(`[ADMIN COMPLIANCE] Generated secure withdrawal PIN for ${user.name}: ${newPin}`);
+    getSupabase().from('notifications').insert({
+      user_id: user.id,
+      title: 'Withdrawal Security PIN Issued',
+      message: `Your account has been granted a Withdrawal Security PIN: ${newPin}. Use this 4-digit PIN for all outbound withdrawals.`,
+      read: false
+    }).then(() => {});
+    alert(`[ADMIN COMPLIANCE] Generated and issued withdrawal PIN for ${user.name}: ${newPin}`);
+  };
+
+  const handleApprovePinRequest = async (targetUser: UserProfile, pinCode: string) => {
+    const finalPin = pinCode.trim() || Math.floor(1000 + Math.random() * 9000).toString();
+    await onUpdateUserDetails(targetUser.id, {
+      withdrawalPin: finalPin,
+      withdrawalPinRequired: true,
+      pinRequested: false,
+      pinStatus: 'issued'
+    });
+    if (selectedUser?.id === targetUser.id) {
+      onSelectUser({
+        ...selectedUser,
+        withdrawalPin: finalPin,
+        withdrawalPinRequired: true,
+        pinRequested: false,
+        pinStatus: 'issued'
+      });
+    }
+
+    const supabase = getSupabase();
+    await supabase.from('notifications').insert({
+      user_id: targetUser.id,
+      title: 'Withdrawal Security PIN Approved',
+      message: `Your application for a Withdrawal Security PIN has been approved by Bank Administration. Your assigned withdrawal PIN is: ${finalPin}. Keep this PIN confidential for authorizing all outbound withdrawals.`,
+      read: false
+    });
+
+    await supabase.from('audit_logs').insert({
+      actor_id: adminUser.id,
+      actor_name: adminUser.name,
+      action: 'Approve Withdrawal PIN',
+      target_user_id: targetUser.id,
+      target_user_name: targetUser.name,
+      details: `Issued withdrawal PIN (${finalPin}) to user.`
+    });
+
+    setSelectedRequest(null);
+    alert(`[ADMIN ACTION] Issued Withdrawal Security PIN (${finalPin}) to ${targetUser.name}!`);
+  };
+
+  const handleRejectPinRequest = async (targetUser: UserProfile) => {
+    await onUpdateUserDetails(targetUser.id, {
+      pinRequested: false,
+      pinStatus: 'rejected'
+    });
+    if (selectedUser?.id === targetUser.id) {
+      onSelectUser({
+        ...selectedUser,
+        pinRequested: false,
+        pinStatus: 'rejected'
+      });
+    }
+
+    const supabase = getSupabase();
+    await supabase.from('notifications').insert({
+      user_id: targetUser.id,
+      title: 'Withdrawal PIN Application Update',
+      message: 'Your request for a Withdrawal Security PIN was not approved by Bank Administration at this time.',
+      read: false
+    });
+
+    await supabase.from('audit_logs').insert({
+      actor_id: adminUser.id,
+      actor_name: adminUser.name,
+      action: 'Reject Withdrawal PIN',
+      target_user_id: targetUser.id,
+      target_user_name: targetUser.name,
+      details: 'Rejected withdrawal PIN application.'
+    });
+
+    setSelectedRequest(null);
+    alert(`[ADMIN ACTION] Rejected withdrawal PIN application for ${targetUser.name}.`);
   };
 
   const handleResetPin = (user: UserProfile) => {
@@ -414,27 +499,6 @@ export default function AdminPanel({
 
   return (
     <div className="w-full text-left font-sans">
-      <AnimatePresence>
-        {selectedRequest && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-2xl text-left">
-                    <h3 className="font-bold text-lg mb-4">{selectedRequest.type} Review</h3>
-                    {selectedRequest.id.startsWith('kyc-') && (
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                           {/* Side-by-side ID Images - Using mock URLs as identified in KYCWizard */}
-                            <img src="https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&q=80&w=600" alt="Front ID" className="rounded-xl w-full h-48 object-cover" />
-                            <img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=600" alt="Back ID" className="rounded-xl w-full h-48 object-cover" />
-                        </div>
-                    )}
-                    <p className="text-sm mb-6">Reviewing {selectedRequest.user.name}'s submission.</p>
-                    <div className="flex gap-4 justify-end">
-                        <button onClick={() => handleRequestDecision('reject')} className="px-4 py-2 bg-rose-500 text-white rounded-xl">Reject</button>
-                        <button onClick={() => handleRequestDecision('approve')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl">Approve</button>
-                    </div>
-                </motion.div>
-            </div>
-        )}
-      </AnimatePresence>
       <AnimatePresence mode="wait">
 
         {/* TAB 1: ADMIN DASHBOARD OVERVIEW */}
@@ -670,6 +734,16 @@ export default function AdminPanel({
                           } catch (e) {
                             // ignore parsing error
                           }
+                        }
+                        if (u.pinRequested || u.pinStatus === 'requested') {
+                          list.push({
+                            id: `pin-${u.id}`,
+                            userId: u.id,
+                            user: u,
+                            type: 'Withdrawal Security PIN Application',
+                            submittedAt: u.pinRequestDate || u.joinedDate || new Date().toISOString(),
+                            status: 'Pending'
+                          });
                         }
                       });
 
@@ -1815,7 +1889,42 @@ export default function AdminPanel({
               </div>
 
               {/* Specific Details */}
-              {selectedRequest.type === 'Sovereign KYC ID Verification' ? (
+              {selectedRequest.type === 'Withdrawal Security PIN Application' ? (
+                // PIN APPLICATION DETAILS
+                <div className="space-y-6 text-xs">
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 space-y-1">
+                    <span className="font-mono text-[10px] uppercase font-bold block">Withdrawal PIN Security Request</span>
+                    <p className="text-[11px] text-slate-700 dark:text-zinc-300">
+                      User <strong>{selectedRequest.user.name}</strong> has submitted an application to receive a 4-digit Withdrawal Security PIN. Approve to issue the assigned PIN and grant withdrawal authorization.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                      Assign 4-Digit Security PIN for {selectedRequest.user.name}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        maxLength={4}
+                        value={adminPinInput}
+                        onChange={(e) => setAdminPinInput(e.target.value)}
+                        className="w-32 px-3 py-2 text-center font-mono font-bold text-lg bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-indigo-500 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAdminPinInput(Math.floor(1000 + Math.random() * 9000).toString())}
+                        className="px-3 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 rounded-xl text-xs font-semibold"
+                      >
+                        Randomize Code
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      This 4-digit PIN will be encrypted, assigned to user credentials, and notified directly to the customer.
+                    </p>
+                  </div>
+                </div>
+              ) : selectedRequest.type === 'Sovereign KYC ID Verification' ? (
                 // KYC DETAILS
                 <div className="space-y-6">
                   {(() => {
@@ -1967,38 +2076,44 @@ export default function AdminPanel({
                 <button
                   type="button"
                   onClick={async () => {
-                    if (selectedRequest.type === 'Sovereign KYC ID Verification') {
+                    if (selectedRequest.type === 'Withdrawal Security PIN Application') {
+                      await handleApprovePinRequest(selectedRequest.user, adminPinInput);
+                    } else if (selectedRequest.type === 'Sovereign KYC ID Verification') {
                       onUpdateUserDetails(selectedRequest.userId, { verificationStatus: 'verified' });
+                      setSelectedRequest(null);
                     } else {
                       try {
                         const taxObj = JSON.parse(selectedRequest.user.sourceFunds);
                         taxObj.taxFilingStatus = 'approved';
                         onUpdateUserDetails(selectedRequest.userId, { sourceFunds: JSON.stringify(taxObj) });
                       } catch(e) {}
+                      setSelectedRequest(null);
                     }
-                    setSelectedRequest(null);
                   }}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition hover:scale-101 active:scale-99"
                 >
-                  Approve Compliance
+                  {selectedRequest.type === 'Withdrawal Security PIN Application' ? 'Approve & Issue PIN' : 'Approve Compliance'}
                 </button>
                 <button
                   type="button"
                   onClick={async () => {
-                    if (selectedRequest.type === 'Sovereign KYC ID Verification') {
+                    if (selectedRequest.type === 'Withdrawal Security PIN Application') {
+                      await handleRejectPinRequest(selectedRequest.user);
+                    } else if (selectedRequest.type === 'Sovereign KYC ID Verification') {
                       onUpdateUserDetails(selectedRequest.userId, { verificationStatus: 'unverified' });
+                      setSelectedRequest(null);
                     } else {
                       try {
                         const taxObj = JSON.parse(selectedRequest.user.sourceFunds);
                         taxObj.taxFilingStatus = 'rejected';
                         onUpdateUserDetails(selectedRequest.userId, { sourceFunds: JSON.stringify(taxObj) });
                       } catch(e) {}
+                      setSelectedRequest(null);
                     }
-                    setSelectedRequest(null);
                   }}
                   className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition hover:scale-101 active:scale-99"
                 >
-                  Deny Compliance
+                  {selectedRequest.type === 'Withdrawal Security PIN Application' ? 'Deny PIN Request' : 'Deny Compliance'}
                 </button>
               </div>
 
