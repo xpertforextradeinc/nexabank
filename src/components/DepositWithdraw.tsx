@@ -110,6 +110,10 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
   const calculatedFee = parsedAmount * feeRate;
   const totalDeduction = parsedAmount + calculatedFee;
 
+  // Modal state for PIN authorization step
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinModalError, setPinModalError] = useState('');
+
   const handleCopyAddress = () => {
     const addressToCopy = user.assignedCryptoWallet || '0x77E125D9B6C2e359F67b97c489b0Ca7dB124c6F1';
     navigator.clipboard.writeText(addressToCopy);
@@ -136,9 +140,11 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }, 1500);
   };
 
-  const handleWithdrawalSubmit = async (e: FormEvent) => {
+  // Step 1: Initial validation before opening PIN security modal
+  const handleWithdrawalInitialSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setPinModalError('');
     const amt = parseFloat(wthAmount);
 
     if (isNaN(amt) || amt <= 20) {
@@ -147,7 +153,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }
 
     if (totalDeduction > wallet.availableBalance) {
-      setError(`Insufficient available balance. Total discharge required (with fee): $${totalDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}. Your available balance is $${wallet.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`);
+      setError(`Insufficient available balance. Total required (with fee): $${totalDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}. Your available balance is $${wallet.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`);
       return;
     }
 
@@ -207,23 +213,32 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
     }
 
     if (user.status === 'hold') {
-      setError('Account is currently on hold. Administrative lock prevents outbound ledger activities.');
+      setError('Account is currently on hold. Administrative lock prevents outbound transactions.');
       return;
     }
 
+    // Input details are valid -> Open PIN authorization modal
+    setShowPinModal(true);
+  };
+
+  // Step 2: Final execution inside PIN modal after PIN verification
+  const handleExecuteWithdrawal = async () => {
+    setPinModalError('');
+    const amt = parseFloat(wthAmount);
+
     // Check withdrawal PIN requirement
     if (!hasIssuedPin) {
-      setError('Withdrawal Security PIN Required: You have not been issued a Withdrawal PIN by Bank Administration yet. Please click "Apply / Request Withdrawal PIN from Admin" below.');
+      setPinModalError('Withdrawal Security PIN Required: You have not been issued a Withdrawal PIN by Bank Administration yet. Please apply for a PIN below.');
       return;
     }
 
     if (user.withdrawalPinRequired || user.withdrawalPin) {
       if (!enteredPin) {
-        setError('Security code (Withdrawal PIN) is required to approve this payout.');
+        setPinModalError('Security code (Withdrawal PIN) is required to approve this payout.');
         return;
       }
       if (enteredPin !== user.withdrawalPin) {
-        setError('Incorrect security PIN. Please contact administration or reset in security settings.');
+        setPinModalError('Incorrect security PIN. Please contact administration or reset in security settings.');
         return;
       }
     }
@@ -265,9 +280,10 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       const wthError = result instanceof Promise ? await result : result;
       setLoading(false);
       if (wthError) {
-        setError(wthError);
+        setPinModalError(wthError);
         return;
       }
+      setShowPinModal(false);
       setWthSuccess(true);
       setWthAmount('');
       setEnteredPin('');
@@ -280,7 +296,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
       setTimeout(() => setWthSuccess(false), 5000);
     } catch (e: any) {
       setLoading(false);
-      setError(e.message || 'An unexpected server error occurred.');
+      setPinModalError(e.message || 'An unexpected server error occurred.');
     }
   };
 
@@ -743,7 +759,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
 
             <div className="mb-6">
               <h3 className="font-display font-bold text-lg">Instant Asset Withdrawal</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Discharge balance ledgers directly into external bank or crypto networks.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Transfer your available funds directly to an external US bank account or crypto wallet.</p>
             </div>
 
             {/* Tap Switcher between Crypto Wallet and US Bank Transfer */}
@@ -780,7 +796,7 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
               </button>
             </div>
 
-            <form onSubmit={handleWithdrawalSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleWithdrawalInitialSubmit} className="flex flex-col gap-5">
               
               {/* Crypto Form Fields */}
               {wthTab === 'crypto' && (
@@ -985,66 +1001,6 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
                 </div>
               )}
 
-              {/* Withdrawal PIN overlay & Access Request UI */}
-              {!hasIssuedPin ? (
-                <div className="p-5 bg-amber-500/10 border border-amber-500/25 rounded-2xl space-y-3 text-left">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-amber-500 shrink-0" />
-                    <span className="font-display font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      Withdrawal Security Authorization PIN Required
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
-                    You have not been issued an admin-approved Withdrawal Security PIN yet. All outbound cash & crypto payouts require a 4-digit security PIN issued by Bank Administration. If this is your first time attempting to withdraw, please apply or request access below.
-                  </p>
-
-                  {isPinRequested ? (
-                    <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0 text-amber-500" />
-                      <span>Withdrawal PIN Application Submitted (Awaiting Bank Admin Approval)</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={requestingPin}
-                      onClick={handleRequestPinFromAdmin}
-                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 transition hover:scale-102 active:scale-98 shadow-sm cursor-pointer disabled:opacity-50"
-                    >
-                      {requestingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                      Apply / Request Withdrawal PIN from Admin
-                    </button>
-                  )}
-
-                  {pinReqMsg && (
-                    <p className="text-emerald-500 font-semibold text-xs mt-1">{pinReqMsg}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3 text-left">
-                  <div className="flex items-center gap-2">
-                    <Key className="w-4 h-4 text-amber-500" />
-                    <span className="font-display font-semibold text-[11px] text-amber-500 uppercase tracking-wider">
-                      Administrative PIN Security Guard Enforced
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Input your 4-digit Withdrawal PIN to authorize this discharge (PIN Assigned: **{user.withdrawalPin || '••••'}**).
-                  </p>
-                  <input
-                    type="password"
-                    placeholder="••••"
-                    value={enteredPin}
-                    onChange={(e) => {
-                      setEnteredPin(e.target.value);
-                      setError('');
-                    }}
-                    maxLength={4}
-                    className="w-28 p-2 text-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/15 focus:border-amber-500 transition tracking-widest text-slate-800 dark:text-white"
-                    id="input-withdrawal-pin"
-                  />
-                </div>
-              )}
-
               {error && (
                 <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1055,17 +1011,17 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90 transition font-sans font-semibold text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white transition font-sans font-bold text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                 id="btn-withdrawal-submit"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Packaging Handshake Ledger...
+                    Processing...
                   </>
                 ) : (
                   <>
-                    Discharge Outbound Funds
+                    Proceed with Withdrawal
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -1076,6 +1032,172 @@ export default function DepositWithdraw({ user, wallet, onAddDeposit, onAddWithd
         )}
 
       </div>
+
+      {/* Withdrawal Security Authorization Modal (opens after clicking Proceed with Withdrawal) */}
+      <AnimatePresence>
+        {showPinModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-md p-6 sm:p-8 rounded-3xl border shadow-2xl ${
+                isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 text-slate-900'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-500">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-base">Withdrawal Authorization</h3>
+                    <p className="text-[11px] text-slate-400">Security Clearance Required</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setPinModalError('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {/* Transaction Summary Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2 text-xs mb-5">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Withdrawal Amount:</span>
+                  <span className="font-mono font-bold">${parsedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-indigo-500">
+                  <span>Processing Fee ({wthTab === 'crypto' ? '1.5%' : '0.5%'}):</span>
+                  <span className="font-mono">${calculatedFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 dark:border-zinc-800 pt-2 font-bold text-slate-800 dark:text-white">
+                  <span>Total Account Deduction:</span>
+                  <span className="font-mono text-indigo-600 dark:text-indigo-400">${totalDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="border-t border-slate-200 dark:border-zinc-800 pt-2 text-[11px] text-slate-500">
+                  <span className="block font-semibold text-slate-700 dark:text-slate-300">Destination Details:</span>
+                  {wthTab === 'crypto' ? (
+                    <span className="font-mono break-all text-indigo-500 block mt-0.5">{cryptoCurrency} ({cryptoNetwork}): {cryptoAddress}</span>
+                  ) : (
+                    <span className="block mt-0.5">{selectedBank} • Account ending in **{accountNumber.slice(-4)}** ({accountHolderName})</span>
+                  )}
+                </div>
+              </div>
+
+              {/* PIN Authorization Section */}
+              {!hasIssuedPin ? (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl space-y-3 text-left mb-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="font-display font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Withdrawal Security PIN Required
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
+                    You have not been issued an admin-approved Withdrawal Security PIN yet. All outbound payouts require a 4-digit security PIN issued by Bank Administration. If this is your first time attempting to withdraw, please apply or request access below.
+                  </p>
+
+                  {isPinRequested ? (
+                    <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0 text-amber-500" />
+                      <span>Withdrawal PIN Application Submitted (Awaiting Bank Admin Approval)</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={requestingPin}
+                      onClick={handleRequestPinFromAdmin}
+                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
+                    >
+                      {requestingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                      Apply / Request Withdrawal PIN from Admin
+                    </button>
+                  )}
+
+                  {pinReqMsg && (
+                    <p className="text-emerald-500 font-semibold text-xs mt-1 text-center">{pinReqMsg}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3 text-left mb-4">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-4 h-4 text-amber-500" />
+                    <span className="font-display font-semibold text-[11px] text-amber-500 uppercase tracking-wider">
+                      Enter 4-Digit Security PIN
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Input your 4-digit Withdrawal PIN to authorize this transfer (Assigned PIN: **{user.withdrawalPin || '••••'}**).
+                  </p>
+                  <div className="flex items-center justify-center pt-1">
+                    <input
+                      type="password"
+                      placeholder="••••"
+                      value={enteredPin}
+                      onChange={(e) => {
+                        setEnteredPin(e.target.value);
+                        setPinModalError('');
+                      }}
+                      maxLength={4}
+                      autoFocus
+                      className="w-36 p-2.5 text-center bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 rounded-xl text-lg font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition tracking-widest text-slate-900 dark:text-white"
+                      id="modal-input-withdrawal-pin"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {pinModalError && (
+                <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs flex items-center gap-2 mb-4">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{pinModalError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setPinModalError('');
+                  }}
+                  className="flex-1 py-3 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition font-sans font-semibold text-xs rounded-xl cursor-pointer"
+                >
+                  Back / Edit Details
+                </button>
+                {hasIssuedPin && (
+                  <button
+                    type="button"
+                    disabled={loading || !enteredPin || enteredPin.length < 4}
+                    onClick={handleExecuteWithdrawal}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white transition font-sans font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                    id="btn-confirm-withdrawal-final"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Authorizing...
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirm Withdrawal</span>
+                        <CheckCircle2 className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
