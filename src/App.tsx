@@ -514,7 +514,30 @@ export default function App() {
           supabase.from('notifications').select('*').eq('user_id', userId).order('timestamp', { ascending: false })
         ]);
 
-        if (wRes.data) setWallets([mapWalletFromDB(wRes.data)]);
+        if (wRes.data) {
+          setWallets([mapWalletFromDB(wRes.data)]);
+        } else if (userId) {
+          try {
+            const defaultDBWallet = {
+              user_id: userId,
+              main_balance: 0,
+              available_balance: 0,
+              pending_balance: 0,
+              savings_balance: 0
+            };
+            await supabase.from('wallets').upsert(defaultDBWallet, { onConflict: 'user_id' });
+            setWallets([mapWalletFromDB(defaultDBWallet)]);
+          } catch (walletErr) {
+            console.warn("Wallet provision warning:", walletErr);
+            setWallets([{
+              userId,
+              mainBalance: 0,
+              availableBalance: 0,
+              pendingBalance: 0,
+              savingsBalance: 0
+            }]);
+          }
+        }
         if (tRes.data) setTransactions(tRes.data.map(mapTransactionFromDB));
         if (dRes.data) setDeposits(dRes.data.map(mapDepositFromDB));
         if (wiRes.data) setWithdrawals(wiRes.data.map(mapWithdrawalFromDB));
@@ -1234,7 +1257,13 @@ export default function App() {
   };
 
   // Process data mapped for active UI rendering
-  const activeUserWallet = wallets.find((w) => w.userId === currentUser?.id);
+  const activeUserWallet = wallets.find((w) => w.userId === currentUser?.id) || (currentUser ? {
+    userId: currentUser.id,
+    mainBalance: 0,
+    availableBalance: 0,
+    pendingBalance: 0,
+    savingsBalance: 0
+  } : undefined);
   const activeUserTransactions = transactions.filter((t) => t.userId === currentUser?.id);
   const activeUserNotifs = notifications.filter((n) => n.userId === currentUser?.id);
   const unreadNotifsCount = activeUserNotifs.filter((n) => !n.read).length;

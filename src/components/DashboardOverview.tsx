@@ -35,20 +35,21 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
   // Sparkline data generator
   const getLinePoints = () => {
     // Generates a nice curve simulating daily bank balances
+    const mainBal = wallet?.mainBalance || 0;
     const points = activeRange === '7d' 
-      ? [11000, 11500, 11200, 12800, 12200, 13400, wallet.mainBalance]
-      : [8500, 9200, 9000, 10200, 9800, 11000, 11500, 11200, 12800, 12200, 13400, wallet.mainBalance];
+      ? [11000, 11500, 11200, 12800, 12200, 13400, mainBal]
+      : [8500, 9200, 9000, 10200, 9800, 11000, 11500, 11200, 12800, 12200, 13400, mainBal];
     
     const width = 500;
     const height = 150;
     const maxVal = Math.max(...points) * 1.05;
     const minVal = Math.min(...points) * 0.95;
-    const range = maxVal - minVal;
+    const range = (maxVal - minVal) || 1;
 
     return points.map((val, idx) => {
       const x = (idx / (points.length - 1)) * width;
       const y = height - ((val - minVal) / range) * (height - 30) - 15;
-      return { x, y, val };
+      return { x: isNaN(x) ? 0 : x, y: isNaN(y) ? 75 : y, val };
     });
   };
 
