@@ -569,7 +569,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
         {/* Main Hero Marketing Body with typing indicators */}
         <div className="z-10 max-w-lg my-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-mono text-indigo-400">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-sm font-mono text-indigo-400">
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span>NEXABANK INSTITUTIONAL NET v2.16 ACTIVE</span>
           </div>
@@ -590,7 +590,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                 <Server className="w-3.5 h-3.5 text-emerald-400" />
                 Node Status
               </div>
-              <div className="flex items-center gap-1.5 font-sans font-bold text-xs text-zinc-200">
+              <div className="flex items-center gap-1.5 font-sans font-bold text-sm text-zinc-200">
                 <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
                 ONLINE (100% SECURE)
               </div>
@@ -601,7 +601,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                 <Terminal className="w-3.5 h-3.5 text-indigo-400" />
                 Active Ledger Handshakes
               </div>
-              <div className="font-mono font-bold text-xs text-indigo-400">
+              <div className="font-mono font-bold text-sm text-indigo-400">
                 {handshakeCount.toLocaleString()} SECURED
               </div>
             </div>
@@ -609,7 +609,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
         </div>
 
         {/* Hero Footer Indicators */}
-        <div className="z-10 flex items-center justify-between text-[10px] font-mono text-zinc-500 border-t border-zinc-900/80 pt-6">
+        <div className="z-10 flex items-center justify-between text-sm font-mono text-zinc-500 border-t border-zinc-900/80 pt-6">
           <div className="flex items-center gap-2">
             <Clock className="w-3.5 h-3.5 text-zinc-600 animate-pulse" />
             <span>{liveUTC || '00:00:00 UTC'}</span>
@@ -638,7 +638,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
           {/* Configuration Alert Warning */}
           {configWarning && (
-            <div className="p-4 bg-amber-950/30 border border-amber-800/30 text-amber-200 rounded-2xl text-left text-xs leading-relaxed flex flex-col gap-2 shadow-xl">
+            <div className="p-4 bg-amber-950/30 border border-amber-800/30 text-amber-200 rounded-2xl text-left text-sm leading-relaxed flex flex-col gap-2 shadow-xl">
               <div className="flex items-center gap-2 font-bold text-amber-400">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>Supabase Configuration Key Required</span>
@@ -670,15 +670,15 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   transition={{ duration: 0.2 }}
                 >
                   <div className="mb-6 text-left">
-                    <h2 className="font-display font-bold text-xl text-white">Welcome to NexaBank</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Sign in to access your custody dashboard.</p>
+                    <h2 className="font-display font-bold text-2xl font-extrabold text-white">Welcome to NexaBank</h2>
+                    <p className="text-sm text-zinc-400 mt-1">Sign in to access your custody dashboard.</p>
                   </div>
 
                   <form onSubmit={handleLogin} className="space-y-4">
                     
                     {/* Floating Label Ledger Email */}
                     <div className="flex flex-col text-left space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Email Address</label>
+                      <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Email Address</label>
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
@@ -690,7 +690,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             setEmail(e.target.value);
                             setError('');
                           }}
-                          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                           id="login-email-input"
                           disabled={loading}
                         />
@@ -700,7 +700,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                     {/* Floating Label Passphrase */}
                     <div className="flex flex-col text-left space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Password</label>
+                        <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Password</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -708,7 +708,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             setError('');
                             setSuccess('');
                           }}
-                          className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold focus:outline-none"
+                          className="text-sm text-indigo-400 hover:text-indigo-300 font-semibold focus:outline-none"
                           disabled={loading}
                         >
                           Forgot Password?
@@ -725,7 +725,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             setPassword(e.target.value);
                             setError('');
                           }}
-                          className="w-full pl-10 pr-10 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                          className="w-full pl-10 pr-10 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                           id="login-password-input"
                           disabled={loading}
                         />
@@ -758,7 +758,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                       type="button"
                       onClick={handleGoogleSignIn}
                       disabled={loading}
-                      className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 font-sans font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+                      className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 font-sans font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
                     >
                       <svg className="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 1.485 15.34 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.795-.085-1.4-.195-1.925H12.24z"/>
@@ -769,7 +769,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                   {/* Redirection to register */}
                   <div className="mt-6 text-center border-t border-zinc-850/30 pt-4">
-                    <span className="text-xs text-zinc-400 font-sans">
+                    <span className="text-sm text-zinc-400 font-sans">
                       New to NexaBank?{' '}
                       <button
                         onClick={() => {
@@ -797,15 +797,15 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   transition={{ duration: 0.2 }}
                 >
                   <div className="mb-4 text-left">
-                    <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold">Step {regStep} of 5</span>
-                    <h2 className="font-display font-bold text-xl text-white">
+                    <span className="text-sm font-mono text-emerald-400 uppercase tracking-widest font-bold">Step {regStep} of 5</span>
+                    <h2 className="font-display font-bold text-2xl font-extrabold text-white">
                       {regStep === 1 && "U.S. Personal Identity Details"}
                       {regStep === 2 && "U.S. Residential Coordinates"}
                       {regStep === 3 && "Employment & Financial Profile"}
                       {regStep === 4 && "Government ID & SSN Verification"}
                       {regStep === 5 && "Security PIN & Vault Credentials"}
                     </h2>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <p className="text-sm text-zinc-400 mt-1">
                       {regStep === 1 && "Enter your full legal name and contact details as they appear on your U.S. ID."}
                       {regStep === 2 && "Enter your primary U.S. residential address for AML/KYC verification."}
                       {regStep === 3 && "Provide employment status and primary source of funds."}
@@ -819,7 +819,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                     {[1, 2, 3, 4, 5].map((stepNum) => (
                       <div key={stepNum} className="flex-1 flex items-center">
                         <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all duration-300 border ${
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-sm font-bold transition-all duration-300 border ${
                             stepNum < regStep
                               ? "bg-emerald-500 border-emerald-400 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
                               : stepNum === regStep
@@ -856,7 +856,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* First & Last Legal Name */}
                           <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">First legal Name</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">First legal Name</label>
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -865,12 +865,12 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   placeholder="Alex"
                                   value={regFirstName}
                                   onChange={(e) => { setRegFirstName(e.target.value); setError(''); }}
-                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                             </div>
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Last legal Name</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Last legal Name</label>
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -879,7 +879,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   placeholder="Morgan"
                                   value={regLastName}
                                   onChange={(e) => { setRegLastName(e.target.value); setError(''); }}
-                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                             </div>
@@ -887,7 +887,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* Middle Name (Optional) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Middle Name <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Middle Name <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
                             <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                               <input
@@ -895,7 +895,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                 placeholder="Jordan"
                                 value={regMiddleName}
                                 onChange={(e) => { setRegMiddleName(e.target.value); setError(''); }}
-                                className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                           </div>
@@ -903,22 +903,22 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* Date of Birth & Gender Selection */}
                           <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Date of Birth</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Date of Birth</label>
                               <input
                                 type="date"
                                 required
                                 value={regDob}
                                 onChange={(e) => { setRegDob(e.target.value); setError(''); }}
-                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Gender Identity</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Gender Identity</label>
                               <select
                                 value={regGender}
                                 required
                                 onChange={(e) => { setRegGender(e.target.value); setError(''); }}
-                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none"
+                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold appearance-none"
                               >
                                 <option value="" disabled>Select...</option>
                                 <option value="Male">Male</option>
@@ -931,7 +931,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* Email Input */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Secure Email Destination</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Secure Email Destination</label>
                             <div className="relative">
                               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                               <input
@@ -940,14 +940,14 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                 placeholder="client@nexabank.com"
                                 value={regEmail}
                                 onChange={(e) => { setRegEmail(e.target.value); setError(''); }}
-                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                           </div>
 
                           {/* Phone Input */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Phone Signal</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Phone Signal</label>
                             <div className="relative">
                               <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                               <input
@@ -956,7 +956,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                 placeholder="+1 (555) 019-2831"
                                 value={regPhone}
                                 onChange={(e) => { setRegPhone(e.target.value); setError(''); }}
-                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                           </div>
@@ -975,13 +975,13 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         >
                           {/* Country selector */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Country of Residence</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Country of Residence</label>
                             <div className="relative">
                               <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                               <select
                                 value={regCountry}
                                 onChange={(e) => { setRegCountry(e.target.value); setError(''); }}
-                                className="w-full pl-10 pr-2 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                                className="w-full pl-10 pr-2 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-bold"
                               >
                                 {COUNTRIES.map((c) => (
                                   <option key={c.code} value={c.code} className="bg-zinc-950 text-white animate-fade-in">
@@ -995,7 +995,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* State & City (grid) */}
                           <div className="grid grid-cols-2 gap-3.5">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">
                                 {regCountry === 'US' ? 'U.S. State / Territory' : 'State / Province'}
                               </label>
                               {regCountry === 'US' ? (
@@ -1003,7 +1003,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   value={regState}
                                   required
                                   onChange={(e) => { setRegState(e.target.value); setError(''); }}
-                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-bold"
                                 >
                                   <option value="">Select State...</option>
                                   {US_STATES.map((s) => (
@@ -1019,26 +1019,26 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   placeholder="NY"
                                   value={regState}
                                   onChange={(e) => { setRegState(e.target.value); setError(''); }}
-                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               )}
                             </div>
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">City</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">City</label>
                               <input
                                 type="text"
                                 required
                                 placeholder="New York"
                                 value={regCity}
                                 onChange={(e) => { setRegCity(e.target.value); setError(''); }}
-                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                           </div>
 
                           {/* ZIP/Postal Code */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">
                               {regCountry === 'US' ? 'U.S. ZIP Code' : 'ZIP / Postal Code'}
                             </label>
                             <input
@@ -1047,20 +1047,20 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               placeholder={regCountry === 'US' ? 'e.g. 10001 or 90210' : 'Postal Code'}
                               value={regZip}
                               onChange={(e) => { setRegZip(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                             />
                           </div>
 
                           {/* Residential Address */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Street Address</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Street Address</label>
                             <input
                               type="text"
                               required
                               placeholder="742 Evergreen Terrace, Apt 4B"
                               value={regAddress}
                               onChange={(e) => { setRegAddress(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                             />
                           </div>
                         </motion.div>
@@ -1078,12 +1078,12 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         >
                           {/* Employment Status */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Employment Status</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Employment Status</label>
                             <select
                               value={regEmployment}
                               required
                               onChange={(e) => { setRegEmployment(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-bold"
                             >
                               <option value="" disabled>Select status...</option>
                               <option value="Employed">Employed</option>
@@ -1098,25 +1098,25 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {(regEmployment === 'Employed' || regEmployment === 'Self-Employed') && (
                             <div className="grid grid-cols-2 gap-3.5">
                               <div className="flex flex-col text-left space-y-1">
-                                <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Occupation</label>
+                                <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Occupation</label>
                                 <input
                                   type="text"
                                   required
                                   placeholder="Software Architect"
                                   value={regOccupation}
                                   onChange={(e) => { setRegOccupation(e.target.value); setError(''); }}
-                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                               <div className="flex flex-col text-left space-y-1">
-                                <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Employer Name</label>
+                                <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Employer Name</label>
                                 <input
                                   type="text"
                                   required
                                   placeholder="Nexa Technologies"
                                   value={regEmployer}
                                   onChange={(e) => { setRegEmployer(e.target.value); setError(''); }}
-                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                             </div>
@@ -1124,28 +1124,28 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* Annual Income */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Estimated Annual Income</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Estimated Annual Income</label>
                             <div className="relative">
-                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-500 font-sans">$</span>
+                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500 font-sans">$</span>
                               <input
                                 type="number"
                                 required
                                 placeholder="125000"
                                 value={regIncome}
                                 onChange={(e) => { setRegIncome(e.target.value); setError(''); }}
-                                className="w-full pl-8 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                className="w-full pl-8 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                               />
                             </div>
                           </div>
 
                           {/* Source of Funds */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Source of Funds</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Source of Funds</label>
                             <select
                               value={regSourceFunds}
                               required
                               onChange={(e) => { setRegSourceFunds(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-bold"
                             >
                               <option value="" disabled>Select primary source...</option>
                               <option value="Salary">Employment Salary</option>
@@ -1171,14 +1171,14 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         >
                           {/* ID Type */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">
                               U.S. Government Identity Document
                             </label>
                             <select
                               value={regIdType}
                               required
                               onChange={(e) => { setRegIdType(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-bold"
                             >
                               <option value="US_DriversLicense">U.S. Driver&apos;s License</option>
                               <option value="US_StateID">U.S. State Issued ID Card</option>
@@ -1190,7 +1190,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* ID Number */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">
                               Document ID / License Number
                             </label>
                             <input
@@ -1199,14 +1199,14 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               placeholder="e.g. D12345678 or 9-digit passport index"
                               value={regIdNumber}
                               onChange={(e) => { setRegIdNumber(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                             />
                           </div>
 
                           {/* REQUIRED SSN / ITIN with Federal Badge and Toggle Mask */}
                           <div className="flex flex-col text-left space-y-1.5 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
                             <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-emerald-400 flex items-center gap-1.5">
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-emerald-400 flex items-center gap-1.5">
                                 <Shield className="w-3.5 h-3.5" />
                                 U.S. Social Security Number (SSN / ITIN)
                               </label>
@@ -1226,7 +1226,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   setError('');
                                 }}
                                 maxLength={11}
-                                className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl font-mono text-sm tracking-wider text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-bold"
+                                className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl font-mono text-base tracking-wider text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-bold"
                               />
                               <button
                                 type="button"
@@ -1237,14 +1237,14 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                 {showSsn ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                             </div>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
+                            <p className="text-sm text-zinc-400 leading-relaxed font-sans">
                               Federal banking law (USA PATRIOT Act Section 326) requires all U.S. financial institutions to obtain, verify, and record your 9-digit SSN or ITIN. Your number is encrypted with 256-bit AES vault security.
                             </p>
                           </div>
 
                           {/* Drag and Drop Upload ID (optional) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">
                               U.S. Government ID Upload (Front & Back) <span className="text-zinc-600 font-sans font-normal">(Optional)</span>
                             </label>
                             
@@ -1287,7 +1287,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                     <File className="w-5 h-5" />
                                   </div>
                                   <div className="text-center">
-                                    <span className="text-xs font-semibold text-zinc-200 block max-w-[180px] truncate">{regIdFileName}</span>
+                                    <span className="text-sm font-semibold text-zinc-200 block max-w-[180px] truncate">{regIdFileName}</span>
                                     <span className="text-[9px] font-mono text-emerald-400 mt-0.5 block">Security Locked Document</span>
                                   </div>
                                   <button
@@ -1296,7 +1296,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                       e.stopPropagation();
                                       setRegIdFileName('');
                                     }}
-                                    className="mt-1.5 text-[10px] font-sans font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/20"
+                                    className="mt-1.5 text-sm font-sans font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/20"
                                   >
                                     <Trash2 className="w-3 h-3" /> Remove File
                                   </button>
@@ -1307,8 +1307,8 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                     <Upload className="w-5 h-5" />
                                   </div>
                                   <div className="text-center">
-                                    <span className="text-xs font-bold text-zinc-300 block">Drag & drop your file here</span>
-                                    <span className="text-[10px] text-zinc-500 block">or click to choose manual file</span>
+                                    <span className="text-sm font-bold text-zinc-300 block">Drag & drop your file here</span>
+                                    <span className="text-sm text-zinc-500 block">or click to choose manual file</span>
                                   </div>
                                 </div>
                               )}
@@ -1330,7 +1330,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* Passphrase & Confirm side-by-side */}
                           <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Secure Account Password</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Secure Account Password</label>
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -1339,12 +1339,12 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   placeholder="••••••••"
                                   value={regPassword}
                                   onChange={(e) => { setRegPassword(e.target.value); setError(''); }}
-                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                             </div>
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Confirm Password</label>
+                              <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">Confirm Password</label>
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -1353,7 +1353,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   placeholder="••••••••"
                                   value={regConfirmPassword}
                                   onChange={(e) => { setRegConfirmPassword(e.target.value); setError(''); }}
-                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                  className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                                 />
                               </div>
                             </div>
@@ -1373,7 +1373,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* Transaction PIN (exactly 4 digits) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">4-Digit Security & Banking PIN</label>
+                            <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400">4-Digit Security & Banking PIN</label>
                             <div className="relative">
                               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                               <input
@@ -1386,7 +1386,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                   setRegPin(e.target.value.replace(/\D/g, '').slice(0, 4));
                                   setError('');
                                 }}
-                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-mono text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold tracking-widest"
+                                className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-mono text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold tracking-widest"
                               />
                             </div>
                             <span className="text-[9px] text-zinc-500 leading-normal font-sans block mt-0.5">Required for ATM access, outbound transfers, and identity verification.</span>
@@ -1400,7 +1400,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               onChange={(e) => { setRegAgree(e.target.checked); setError(''); }}
                               className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 mt-0.5 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                             />
-                            <span className="text-[10px] text-zinc-300 leading-relaxed font-sans">
+                            <span className="text-sm text-zinc-300 leading-relaxed font-sans">
                               I certify under penalty of perjury that I am a U.S. resident or authorized individual, that my Social Security Number (SSN/ITIN) and identity details are correct, and that I agree to Nexa Bank&apos;s U.S. Electronic Banking & Privacy Agreement.
                             </span>
                           </label>
@@ -1415,7 +1415,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         <button
                           type="button"
                           onClick={() => { setRegStep(prev => prev - 1); setError(''); }}
-                          className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 font-sans font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 font-sans font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                           <ChevronLeft className="w-4 h-4" /> Back
                         </button>
@@ -1429,7 +1429,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               setRegStep(prev => prev + 1);
                             }
                           }}
-                          className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/10 cursor-pointer"
+                          className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-sans font-bold text-sm tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/10 cursor-pointer"
                         >
                           Next Step <ArrowRight className="w-4 h-4" />
                         </button>
@@ -1437,7 +1437,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         <button
                           type="submit"
                           disabled={loading}
-                          className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 cursor-pointer disabled:opacity-50"
+                          className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-bold text-sm tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 cursor-pointer disabled:opacity-50"
                         >
                           {loading ? "Deploying Vault..." : "Deploy Portfolio Node"}
                           <ArrowRight className="w-4 h-4" />
@@ -1449,7 +1449,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   {/* Redirection back to secure portal, only shown on Step 1 to keep layout concise */}
                   {regStep === 1 && (
                     <div className="mt-4 text-center border-t border-zinc-850/20 pt-3">
-                      <span className="text-xs text-zinc-400 font-sans">
+                      <span className="text-sm text-zinc-400 font-sans">
                         Already registered?{" "}
                         <button
                           type="button"
@@ -1479,13 +1479,13 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   transition={{ duration: 0.2 }}
                 >
                   <div className="mb-6 text-left">
-                    <h2 className="font-display font-bold text-xl text-white">Credential Dispatch</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Request a secure reset handshake link to your mailbox.</p>
+                    <h2 className="font-display font-bold text-2xl font-extrabold text-white">Credential Dispatch</h2>
+                    <p className="text-sm text-zinc-400 mt-1">Request a secure reset handshake link to your mailbox.</p>
                   </div>
 
                   <form onSubmit={handleForgot} className="space-y-4">
                     <div className="flex flex-col text-left space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400 font-sans">Registered Email</label>
+                      <label className="text-sm font-mono uppercase tracking-wider font-bold text-zinc-400 font-sans">Registered Email</label>
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
@@ -1497,7 +1497,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             setEmail(e.target.value);
                             setError('');
                           }}
-                          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-base text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold"
                           disabled={loading}
                         />
                       </div>
@@ -1506,7 +1506,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-3 bg-zinc-800 hover:bg-zinc-750 active:scale-[0.98] text-white font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-3 bg-zinc-800 hover:bg-zinc-750 active:scale-[0.98] text-white font-sans font-bold text-sm tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       {loading ? 'Dispatching System Handshake...' : 'Dispatch Reset Link'}
                     </button>
@@ -1519,7 +1519,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         setError('');
                         setSuccess('');
                       }}
-                      className="text-xs text-zinc-400 hover:text-zinc-200 transition font-sans cursor-pointer font-medium"
+                      className="text-sm text-zinc-400 hover:text-zinc-200 transition font-sans cursor-pointer font-medium"
                       disabled={loading}
                     >
                       Never mind, return to login portal
@@ -1538,8 +1538,8 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   transition={{ duration: 0.2 }}
                 >
                   <div className="mb-6 text-left">
-                    <h2 className="font-display font-bold text-xl text-white">Handshake Activation Pending</h2>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <h2 className="font-display font-bold text-2xl font-extrabold text-white">Handshake Activation Pending</h2>
+                    <p className="text-sm text-zinc-400 mt-1">
                       An activation sequence has been sent to <strong className="text-zinc-200">{verificationEmail}</strong>.
                     </p>
                   </div>
@@ -1551,7 +1551,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                       </div>
                       <div>
                         <span className="text-[9px] font-mono text-zinc-500 uppercase font-bold block">Inbound Security Signal</span>
-                        <p className="text-xs font-semibold text-zinc-300 leading-snug">Please click the authentication link in your email to sync client status.</p>
+                        <p className="text-sm font-semibold text-zinc-300 leading-snug">Please click the authentication link in your email to sync client status.</p>
                       </div>
                     </div>
 
@@ -1562,7 +1562,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         setError('');
                         setSuccess('');
                       }}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/5"
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-sans font-bold text-sm tracking-wider uppercase rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/5"
                     >
                       Return to secure entrance
                     </button>
@@ -1579,7 +1579,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="mt-4 p-3.5 bg-rose-950/30 border border-rose-800/20 text-rose-300 rounded-xl text-left text-xs flex items-start gap-2.5 font-sans"
+                  className="mt-4 p-3.5 bg-rose-950/30 border border-rose-800/20 text-rose-300 rounded-xl text-left text-sm flex items-start gap-2.5 font-sans"
                 >
                   <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{error}</span>
@@ -1591,7 +1591,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="mt-4 p-3.5 bg-emerald-950/30 border border-emerald-800/20 text-emerald-300 rounded-xl text-left text-xs flex items-start gap-2.5 font-sans"
+                  className="mt-4 p-3.5 bg-emerald-950/30 border border-emerald-800/20 text-emerald-300 rounded-xl text-left text-sm flex items-start gap-2.5 font-sans"
                 >
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{success}</span>
@@ -1602,7 +1602,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
           </motion.div>
 
           {/* Secure compliance assurance */}
-          <div className="text-center text-[10px] text-zinc-500 font-mono tracking-wider pt-2">
+          <div className="text-center text-sm text-zinc-500 font-mono tracking-wider pt-2">
             <span>SECURED WITH ADVANCED INTEGRAL ENCRYPTION ● VER: 2.16</span>
           </div>
 
