@@ -1906,12 +1906,14 @@ export default function App() {
         ) : null;
 
       case 'transactions':
-        return (
+        return activeUserWallet ? (
           <TransactionsHistory
             transactions={activeUserTransactions}
+            user={currentUser}
+            wallet={activeUserWallet}
             isDarkMode={isDarkMode}
           />
-        );
+        ) : null;
 
       case 'goals':
         return activeUserWallet ? (() => {

@@ -117,32 +117,28 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
       )}
 
       {/* Quick Financial Actions Component Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         {[
           {
-            title: "Transfer Funds",
-            desc: "P2P & Wire execution",
+            title: "Transfer",
             icon: <ArrowUpRight className="w-5 h-5 text-indigo-400" />,
             tab: "transfer",
             color: "from-indigo-500/10 to-indigo-600/5 border-indigo-500/20"
           },
           {
-            title: "Add Funds / Deposit",
-            desc: "USD, EUR & crypto inflow",
+            title: "Deposit",
             icon: <WalletIcon className="w-5 h-5 text-emerald-400" />,
             tab: "deposit",
             color: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/20"
           },
           {
-            title: "Manage Cards",
-            desc: "Virtual & physical cards",
+            title: "Cards",
             icon: <Shield className="w-5 h-5 text-sky-400" />,
             tab: "cards",
             color: "from-sky-500/10 to-sky-600/5 border-sky-500/20"
           },
           {
-            title: "Savings Goals",
-            desc: "Yield compounding vaults",
+            title: "Goals",
             icon: <PiggyBank className="w-5 h-5 text-amber-400" />,
             tab: "goals",
             color: "from-amber-500/10 to-amber-600/5 border-amber-500/20"
@@ -150,21 +146,17 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
         ].map((action, idx) => (
           <motion.button
             key={idx}
-            whileHover={{ scale: 1.02, y: -2 }}
+            whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onNavigate(action.tab)}
-            className={`p-5 rounded-3xl border bg-gradient-to-br ${action.color} ${isDarkMode ? 'bg-zinc-900/50 border-zinc-800 text-white' : 'bg-white border-slate-200/80 shadow-sm text-slate-900'} flex items-start justify-between text-left cursor-pointer transition-all`}
+            className={`p-3 rounded-2xl border bg-gradient-to-br ${action.color} ${isDarkMode ? 'bg-zinc-900/50 border-zinc-800 text-white' : 'bg-white border-slate-200/80 shadow-sm text-slate-900'} flex flex-col items-center justify-center text-center cursor-pointer transition-all aspect-square`}
           >
-            <div className="space-y-2">
-              <div className={`p-2.5 rounded-2xl w-fit ${isDarkMode ? 'bg-zinc-950 border border-zinc-800' : 'bg-slate-50 border border-slate-100'}`}>
-                {action.icon}
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-sm tracking-tight">{action.title}</h4>
-                <p className="text-[11px] font-mono text-zinc-400 mt-0.5">{action.desc}</p>
-              </div>
+            <div className={`p-2 rounded-xl w-fit ${isDarkMode ? 'bg-zinc-950 border border-zinc-800' : 'bg-slate-50 border border-slate-100'} flex items-center justify-center`}>
+              {action.icon}
             </div>
-            <ChevronRight className="w-4 h-4 text-zinc-500 mt-1 shrink-0" />
+            <span className="text-[10px] font-mono tracking-wide text-center text-zinc-400 mt-1 block">
+              {action.title}
+            </span>
           </motion.button>
         ))}
       </div>
