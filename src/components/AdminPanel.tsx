@@ -161,36 +161,87 @@ export default function AdminPanel({
     setTimeout(() => setEditMsg(''), 3000);
   };
 
-  // Status adjustments toggles
-  const handleToggleSuspend = (user: UserProfile) => {
+  // Status adjustments toggles with RPC
+  const handleToggleSuspend = async (user: UserProfile) => {
     const nextStatus = user.status === 'suspended' ? 'active' : 'suspended';
-    onUpdateUserDetails(user.id, { status: nextStatus });
-    if (selectedUser?.id === user.id) {
-      onSelectUser({ ...selectedUser, status: nextStatus });
+    try {
+      const { error } = await supabase.rpc('admin_modify_user_account', {
+        p_target_user_id: user.id,
+        p_action_type: 'set_status',
+        p_numeric_value: null,
+        p_status_string: nextStatus
+      });
+      if (error) throw error;
+      onUpdateUserDetails(user.id, { status: nextStatus });
+      if (selectedUser?.id === user.id) {
+        onSelectUser({ ...selectedUser, status: nextStatus });
+      }
+      onRefresh();
+    } catch (err: any) {
+      alert(`Error updating account status: ${err.message}`);
     }
   };
 
-  const handleToggleFreeze = (user: UserProfile) => {
+  const handleToggleFreeze = async (user: UserProfile) => {
     const nextStatus = user.status === 'frozen' ? 'active' : 'frozen';
-    onUpdateUserDetails(user.id, { status: nextStatus });
-    if (selectedUser?.id === user.id) {
-      onSelectUser({ ...selectedUser, status: nextStatus });
+    try {
+      const { error } = await supabase.rpc('admin_modify_user_account', {
+        p_target_user_id: user.id,
+        p_action_type: 'set_status',
+        p_numeric_value: null,
+        p_status_string: nextStatus
+      });
+      if (error) throw error;
+      onUpdateUserDetails(user.id, { status: nextStatus });
+      if (selectedUser?.id === user.id) {
+        onSelectUser({ ...selectedUser, status: nextStatus });
+      }
+      onRefresh();
+    } catch (err: any) {
+      alert(`Error updating account status: ${err.message}`);
     }
   };
 
-  const handleToggleHold = (user: UserProfile) => {
+  const handleToggleHold = async (user: UserProfile) => {
     const nextStatus = user.status === 'hold' ? 'active' : 'hold';
-    onUpdateUserDetails(user.id, { status: nextStatus });
-    if (selectedUser?.id === user.id) {
-      onSelectUser({ ...selectedUser, status: nextStatus });
+    try {
+      const { error } = await supabase.rpc('admin_modify_user_account', {
+        p_target_user_id: user.id,
+        p_action_type: 'set_status',
+        p_numeric_value: null,
+        p_status_string: nextStatus
+      });
+      if (error) throw error;
+      onUpdateUserDetails(user.id, { status: nextStatus });
+      if (selectedUser?.id === user.id) {
+        onSelectUser({ ...selectedUser, status: nextStatus });
+      }
+      onRefresh();
+    } catch (err: any) {
+      alert(`Error updating account status: ${err.message}`);
     }
   };
 
-  const handleToggleUpgraded = (user: UserProfile) => {
+  const handleToggleUpgraded = async (user: UserProfile) => {
     const nextVal = !user.isUpgraded;
-    onUpdateUserDetails(user.id, { isUpgraded: nextVal });
-    if (selectedUser?.id === user.id) {
-      onSelectUser({ ...selectedUser, isUpgraded: nextVal });
+    try {
+      const { error } = await supabase.rpc('admin_modify_user_account', {
+        p_target_user_id: user.id,
+        p_action_type: 'set_status',
+        p_numeric_value: null,
+        p_status_string: nextVal ? 'verified' : 'unverified'
+      });
+      if (error) throw error;
+      onUpdateUserDetails(user.id, { isUpgraded: nextVal, verificationStatus: nextVal ? 'verified' : 'unverified' });
+      if (selectedUser?.id === user.id) {
+        onSelectUser({ ...selectedUser, isUpgraded: nextVal, verificationStatus: nextVal ? 'verified' : 'unverified' });
+      }
+      onRefresh();
+    } catch (err: any) {
+      onUpdateUserDetails(user.id, { isUpgraded: nextVal });
+      if (selectedUser?.id === user.id) {
+        onSelectUser({ ...selectedUser, isUpgraded: nextVal });
+      }
     }
   };
 
@@ -329,8 +380,8 @@ export default function AdminPanel({
     alert(`[ADMIN ACTION] Reset withdrawal PIN for ${user.name} to fallback code: 0000`);
   };
 
-  // Adjust Wallet Balance submit
-  const handleAdjustBalanceSubmit = (e: FormEvent) => {
+  // Adjust Wallet Balance submit with RPC
+  const handleAdjustBalanceSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setAdjustSuccess('');
     setAdjustError('');
@@ -342,9 +393,25 @@ export default function AdminPanel({
       return;
     }
 
-    onAdjustWalletBalance(selectedUser.id, adjustType, parsed);
-    setAdjustSuccess(`Ledger adjusted! Executed ${adjustType.toUpperCase()} of $${parsed.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`);
-    setAdjustAmount('');
+    const actionTypeMap = adjustType === 'credit' || adjustType === 'bonus' ? 'increase_balance' : 'decrease_balance';
+
+    try {
+      const { error } = await supabase.rpc('admin_modify_user_account', {
+        p_target_user_id: selectedUser.id,
+        p_action_type: actionTypeMap,
+        p_numeric_value: parsed,
+        p_status_string: null
+      });
+
+      if (error) throw error;
+
+      onAdjustWalletBalance(selectedUser.id, adjustType, parsed);
+      setAdjustSuccess(`Ledger adjusted! Executed ${actionTypeMap.toUpperCase()} of $${parsed.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`);
+      setAdjustAmount('');
+      onRefresh();
+    } catch (err: any) {
+      setAdjustError(err.message || 'Failed to execute administrative ledger modification via RPC.');
+    }
   };
 
   // Helper to get matching wallet

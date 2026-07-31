@@ -298,7 +298,7 @@ export default function KYCWizard({ user, onUpdateUser, onAddAuditLog, isDarkMod
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-slate-400 font-medium">Institutional Class:</span>
-            <span className="font-semibold text-slate-700 dark:text-zinc-300">Platinum Sovereign Ledger</span>
+            <span className="font-semibold text-slate-700 dark:text-zinc-300">Platinum Checking Ledger</span>
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-slate-400 font-medium">Daily Limit cap:</span>
@@ -318,7 +318,7 @@ export default function KYCWizard({ user, onUpdateUser, onAddAuditLog, isDarkMod
           <h3 className="font-display font-bold text-base flex items-center gap-2">
             <User className="w-4 h-4 text-indigo-500" /> Identity verification upgrade (KYC)
           </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">Clearing this secure 3-step wizard unlocks unconstrained sovereign banking tiers.</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Clearing this secure 3-step wizard unlocks unconstrained banking tiers.</p>
         </div>
 
         {/* Step dots */}
@@ -451,7 +451,7 @@ export default function KYCWizard({ user, onUpdateUser, onAddAuditLog, isDarkMod
             {/* Masked Tax ID Input */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">
-                Enter Sovereign 9-Digit {idType}
+                Enter 9-Digit {idType}
               </label>
               <div className="relative flex items-center">
                 <input

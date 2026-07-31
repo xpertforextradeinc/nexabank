@@ -116,6 +116,59 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
         </div>
       )}
 
+      {/* Quick Financial Actions Component Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            title: "Transfer Funds",
+            desc: "P2P & Wire execution",
+            icon: <ArrowUpRight className="w-5 h-5 text-indigo-400" />,
+            tab: "transfer",
+            color: "from-indigo-500/10 to-indigo-600/5 border-indigo-500/20"
+          },
+          {
+            title: "Add Funds / Deposit",
+            desc: "USD, EUR & crypto inflow",
+            icon: <WalletIcon className="w-5 h-5 text-emerald-400" />,
+            tab: "deposit",
+            color: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/20"
+          },
+          {
+            title: "Manage Cards",
+            desc: "Virtual & physical cards",
+            icon: <Shield className="w-5 h-5 text-sky-400" />,
+            tab: "cards",
+            color: "from-sky-500/10 to-sky-600/5 border-sky-500/20"
+          },
+          {
+            title: "Savings Goals",
+            desc: "Yield compounding vaults",
+            icon: <PiggyBank className="w-5 h-5 text-amber-400" />,
+            tab: "goals",
+            color: "from-amber-500/10 to-amber-600/5 border-amber-500/20"
+          }
+        ].map((action, idx) => (
+          <motion.button
+            key={idx}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onNavigate(action.tab)}
+            className={`p-5 rounded-3xl border bg-gradient-to-br ${action.color} ${isDarkMode ? 'bg-zinc-900/50 border-zinc-800 text-white' : 'bg-white border-slate-200/80 shadow-sm text-slate-900'} flex items-start justify-between text-left cursor-pointer transition-all`}
+          >
+            <div className="space-y-2">
+              <div className={`p-2.5 rounded-2xl w-fit ${isDarkMode ? 'bg-zinc-950 border border-zinc-800' : 'bg-slate-50 border border-slate-100'}`}>
+                {action.icon}
+              </div>
+              <div>
+                <h4 className="font-display font-bold text-sm tracking-tight">{action.title}</h4>
+                <p className="text-[11px] font-mono text-zinc-400 mt-0.5">{action.desc}</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-500 mt-1 shrink-0" />
+          </motion.button>
+        ))}
+      </div>
+
       {/* Upper Cards: Real-time Balance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Metric 1: Main Balance */}
@@ -152,14 +205,14 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
         {/* Metric 2: Pending Cleared Vault */}
         <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative flex flex-col justify-between`}>
           <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-zinc-950 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+            <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-zinc-950 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
               <Clock className="w-5 h-5" />
             </div>
             <div>
               <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
                 Pending Funds
               </span>
-              <h3 className="font-display font-bold text-sm leading-tight">Awaiting Admin Settlement</h3>
+              <h3 className="font-display font-bold text-sm leading-tight">Instant Liquidity Ledger</h3>
             </div>
           </div>
 
@@ -168,11 +221,14 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
               ${wallet.pendingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </h2>
             <div className="flex justify-between items-center mt-3 text-xs">
-              <span className="text-slate-400 font-sans">Verification status:</span>
-              <span className="font-mono text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500">
-                Awaiting Clearing
+              <span className="text-slate-400 font-sans">Pipeline status:</span>
+              <span className="font-mono text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                ACTIVE PIPELINE
               </span>
             </div>
+            <p className="text-[10px] text-slate-400 mt-2 font-mono">
+              Real-time settlement processing via FedNow / RTP network networks.
+            </p>
           </div>
         </div>
 
@@ -524,7 +580,7 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
         {/* Financial Wellness and limit Sentinel (5 columns) */}
         <div className={`lg:col-span-5 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} flex flex-col justify-between`}>
           <div>
-            <span className="text-emerald-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Sovereign Asset Sentinel</span>
+            <span className="text-emerald-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Account Sentinel</span>
             <h3 className="font-display font-semibold text-base">Liquidity Health index</h3>
             <p className="text-xs text-slate-500 mt-0.5">Real-time indicators validating account risk parameters and reserve balances.</p>
           </div>
@@ -576,7 +632,7 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
 
           <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5">
             <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span>Sovereign security checks completed internally</span>
+            <span>Internal security checks completed</span>
           </div>
         </div>
       </div>
@@ -588,7 +644,7 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-display font-medium text-sm">256-bit Secure Ledger Handshake Protected</h4>
+            <h4 className="font-display font-medium text-sm">256-bit Secure Bank Encryption Protected</h4>
             <p className="text-xs text-slate-400 mt-0.5">
               Approved transactions are audited under autonomous smart compliance frameworks.
             </p>

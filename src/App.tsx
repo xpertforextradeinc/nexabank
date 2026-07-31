@@ -269,7 +269,6 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [showWelcome, setShowWelcome] = useState<boolean>(false);
 
   // Core database states
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -584,11 +583,6 @@ export default function App() {
           console.log("Session found for user:", session.user.id);
           const rawProfile = await fetchProfileWithRetry(session.user.id);
           const mappedRole = rawProfile?.role || 'user';
-          
-          if (localStorage.getItem('is_new_registration') === 'true') {
-            setShowWelcome(true);
-            localStorage.removeItem('is_new_registration');
-          }
 
           // Setup direct landing tabs depending on role
           if (mappedRole === 'admin') {
@@ -617,11 +611,6 @@ export default function App() {
         if (session?.user) {
           const rawProfile = await fetchProfileWithRetry(session.user.id);
           const mappedRole = rawProfile?.role || 'user';
-
-          if (localStorage.getItem('is_new_registration') === 'true') {
-            setShowWelcome(true);
-            localStorage.removeItem('is_new_registration');
-          }
 
           await loadUserData(session.user.id, mappedRole);
         } else {
@@ -1299,94 +1288,6 @@ export default function App() {
   return (
     <div className={`min-h-screen font-sans flex flex-col ${isDarkMode ? 'bg-zinc-950 text-zinc-100 dark' : 'bg-slate-50 text-slate-900'}`}>
       
-      {/* WELCOME PORTFOLIO INSTANTIATION OVERLAY ANIMATION */}
-      <AnimatePresence>
-        {showWelcome && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-zinc-950 z-[100] flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden select-none"
-          >
-            <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-[450px] h-[450px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-            <div className="w-full max-w-lg space-y-8 text-center flex flex-col items-center">
-              <motion.div
-                initial={{ scale: 0.8, rotate: -180, opacity: 0 }}
-                animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                transition={{ type: 'spring', damping: 15, delay: 0.1 }}
-                className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center border border-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.3)] relative"
-              >
-                <Shield className="w-8 h-8 text-white animate-pulse" />
-              </motion.div>
-
-              <div className="space-y-3">
-                <motion.h2
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="font-display font-black text-2xl tracking-tight text-white uppercase"
-                >
-                  Handshake Completed Successfully
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-zinc-400 text-xs font-mono max-w-sm tracking-widest"
-                >
-                  CREATING LOCAL CLIENT LEDGER VAULTS...
-                </motion.p>
-              </div>
-
-              {/* Sequential high tech visual checklists */}
-              <div className="w-full max-w-xs space-y-2.5 font-mono text-[10px] text-zinc-500 text-left bg-zinc-900/60 border border-zinc-900/50 rounded-2xl p-4.5 shadow-xl">
-                {[
-                  { text: "RESOLVING SOVEREIGN ENCRYPTED KEY...", delay: 0.6 },
-                  { text: "SYNCING WITH DECENTRALIZED CUSTODY NET...", delay: 1.2 },
-                  { text: "CREDITING INTRODUCTORY ASSET BALANCE ($1,000.00)...", delay: 1.8 },
-                  { text: "ESTABLISHING MAIN NET VAULT SAFEGUARDS...", delay: 2.4 }
-                ].map((step, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: step.delay }}
-                    className="flex items-center gap-2"
-                  >
-                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-950 border border-emerald-900/80 flex items-center justify-center">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: step.delay + 0.3 }}
-                      >
-                        <Check className="w-2.5 h-2.5 text-emerald-400 font-bold animate-bounce" />
-                      </motion.div>
-                    </div>
-                    <span className="text-zinc-300 font-semibold">{step.text}</span>
-                  </motion.div>
-                ))}
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 3.2 }}
-                className="pt-2"
-              >
-                <button
-                  onClick={() => setShowWelcome(false)}
-                  className="px-6 py-3 bg-white text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-lg shadow-white/10"
-                >
-                  Enter Dashboard Portal
-                </button>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Visual Toast Notification Overlay */}
       <AnimatePresence>
         {toastMessage && (
@@ -1818,7 +1719,7 @@ export default function App() {
     // 2. REGULAR USER ROUTING SPACE
     const allowedUserTabs = [
       'dashboard', 'accounts', 'deposit', 'withdraw', 'transfer', 'transactions', 
-      'cards', 'notifications', 'profile', 'security', 'settings', 'support'
+      'cards', 'goals', 'notifications', 'profile', 'security', 'settings', 'support'
     ];
     if (!allowedUserTabs.includes(currentTab)) {
       // Security role gate - instantly fallback to dashboard if they request admin paths
@@ -2011,6 +1912,32 @@ export default function App() {
             isDarkMode={isDarkMode}
           />
         );
+
+      case 'goals':
+        return activeUserWallet ? (() => {
+          const goal: SavingsGoal = {
+            name: 'Nexa Capital Growth',
+            current: activeUserWallet.savingsBalance,
+            target: 10000.00,
+            category: 'Asset Compound'
+          };
+          return (
+            <div className="max-w-2xl mx-auto space-y-8 text-left">
+              <div>
+                <span className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Savings Goals & Yield</span>
+                <h2 className="text-2xl font-display font-bold text-slate-900 dark:text-white">Yield Compounding Vaults</h2>
+                <p className="text-xs text-slate-500 mt-1">Allocate funds directly to your high-yield savings goals with 4.85% APY compounding.</p>
+              </div>
+              <GoalTracker 
+                goal={goal} 
+                onAddFunds={handleAddGoalFunds} 
+                checkingBalance={activeUserWallet.availableBalance} 
+                isDarkMode={isDarkMode}
+                user={currentUser}
+              />
+            </div>
+          );
+        })() : null;
 
       case 'cards':
         return activeUserWallet ? (() => {

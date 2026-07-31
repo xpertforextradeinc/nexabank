@@ -42,6 +42,12 @@ const COUNTRIES = [
   'Japan'
 ];
 
+const NETWORK_FEE_SCHEDULE = {
+  'FedNow / Real-Time Payments (RTP)': 1.50,
+  'Same-Day ACH Routing': 0.50,
+  'Standard Nexa Instant P2P': 0.00
+};
+
 export default function TransferFunds({ user, wallet, usersList, onTransfer, isDarkMode }: TransferFundsProps) {
   const [activeTab, setActiveTab] = useState<'peer' | 'ach' | 'swift'>('peer');
   
@@ -50,16 +56,25 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
   const [recipientEmail, setRecipientEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
+  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof NETWORK_FEE_SCHEDULE>('FedNow / Real-Time Payments (RTP)');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState<{
     reference: string;
     amount: number;
+    fee: number;
+    totalDebit: number;
     recipientName: string;
     recipientEmail: string;
     type: string;
     date: string;
   } | null>(null);
+
+  // Computed fees & total debit
+  const numericAmount = parseFloat(amount) || 0;
+  const processingFee = NETWORK_FEE_SCHEDULE[selectedNetwork] ?? 1.50;
+  const totalDebitAmount = numericAmount > 0 ? numericAmount + processingFee : 0;
+  const hasSufficientBalance = wallet.availableBalance >= totalDebitAmount;
 
   // ACH / Domestic Bank States
   const [achRecipientName, setAchRecipientName] = useState('');
@@ -112,8 +127,8 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
       return;
     }
 
-    if (amt > wallet.availableBalance) {
-      setError(`Insufficient available funds. Current checking balance: $${wallet.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+    if (!hasSufficientBalance) {
+      setError('Insufficient balance to cover transaction and processing fees.');
       return;
     }
 
@@ -126,6 +141,8 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
       setError('Your account is on administrative hold. No transfers can be executed.');
       return;
     }
+
+    const finalMemo = `[Fee: $${processingFee.toFixed(2)} via ${selectedNetwork}] ${memo}`.trim();
 
     if (activeTab === 'peer') {
       if (!recipientEmail.trim()) {
@@ -142,15 +159,17 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
       setLoading(true);
       setTimeout(() => {
         setLoading(false);
-        onTransfer(targetUser.id, amt);
+        onTransfer(targetUser.id, totalDebitAmount);
         
         // Open interactive receipt
         setReceipt({
           reference: `NXTR-${Math.floor(100000 + Math.random() * 900000)}`,
           amount: amt,
+          fee: processingFee,
+          totalDebit: totalDebitAmount,
           recipientName: targetUser.name,
           recipientEmail: targetUser.email,
-          type: 'Instant Nexa P2P Settle',
+          type: `Instant P2P (${selectedNetwork})`,
           date: new Date().toLocaleString()
         });
         setAmount('');
@@ -174,25 +193,25 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
           // Call Increase Sandbox API
           await createIncreaseTransfer({
             accountId: user.increaseAccountId,
-            amount: Math.round(amt * 100), // convert to cents
+            amount: Math.round(totalDebitAmount * 100), // convert to cents
             accountNumber: achAccount,
             routingNumber: achRouting,
-            memo: memo || 'Transfer from NexaBank'
+            memo: finalMemo
           });
         }
         
-        // Even if we don't have an increase account (for legacy/demo), we simulate success
         setLoading(false);
-        // Use first available user or current user for logging wire discharge
         const fallbackTarget = peerRecipients[0] || user;
-        onTransfer(fallbackTarget.id, amt);
+        onTransfer(fallbackTarget.id, totalDebitAmount);
 
         setReceipt({
           reference: `ACH-US-${Math.floor(100000 + Math.random() * 900000)}`,
           amount: amt,
+          fee: processingFee,
+          totalDebit: totalDebitAmount,
           recipientName: `${achRecipientName} (${achBankName})`,
           recipientEmail: `ABA ${achRouting} • Acc ****${achAccount.slice(-4) || '8841'}`,
-          type: 'Domestic Wire ACH Settle',
+          type: `Domestic ACH (${selectedNetwork})`,
           date: new Date().toLocaleString()
         });
         setAmount('');
@@ -214,14 +233,16 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
       setTimeout(() => {
         setLoading(false);
         const fallbackTarget = peerRecipients[0] || user;
-        onTransfer(fallbackTarget.id, amt);
+        onTransfer(fallbackTarget.id, totalDebitAmount);
 
         setReceipt({
           reference: `SWIFT-${Math.floor(100000 + Math.random() * 900000)}`,
           amount: amt,
+          fee: processingFee,
+          totalDebit: totalDebitAmount,
           recipientName: `${swiftRecipientName} (${swiftCountry})`,
           recipientEmail: `BIC: ${swiftCode.toUpperCase()} • IBAN ${iban.slice(0, 4)}...${iban.slice(-4)}`,
-          type: 'Global SWIFT Wire Settle',
+          type: `Global SWIFT (${selectedNetwork})`,
           date: new Date().toLocaleString()
         });
         setAmount('');
@@ -381,8 +402,18 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
                   </div>
 
                   <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-mono text-[10px] uppercase">Transfer Amount</span>
+                    <span className="font-mono font-semibold">${receipt.amount.toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-mono text-[10px] uppercase">Fee Charged</span>
-                    <span className="text-emerald-500 font-bold">$0.00 (Free Waiver)</span>
+                    <span className="font-mono font-semibold text-amber-500">${receipt.fee.toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-200/40 dark:border-zinc-850">
+                    <span className="text-slate-400 font-mono text-[10px] uppercase">Total Debit</span>
+                    <span className="font-mono font-bold text-indigo-500">${receipt.totalDebit.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between items-center pt-2 border-t border-slate-200/40 dark:border-zinc-850">
@@ -671,6 +702,47 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Network Speed Routing Method Dropdown & Fee Breakdown */}
+          <div className="space-y-3 pt-2">
+            <label className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold block">
+              US NETWORK SPEED ROUTING METHOD & FEE SCHEDULE
+            </label>
+            <select
+              value={selectedNetwork}
+              onChange={(e) => setSelectedNetwork(e.target.value as any)}
+              className="w-full p-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-2xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+              id="select-network-routing"
+            >
+              <option value="FedNow / Real-Time Payments (RTP)">FedNow / Real-Time Payments (RTP) — $1.50 Fee</option>
+              <option value="Same-Day ACH Routing">Same-Day ACH Routing — $0.50 Fee</option>
+              <option value="Standard Nexa Instant P2P">Standard Nexa Instant P2P — $0.00 Fee</option>
+            </select>
+
+            {/* Line-item breakdown */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950/80 border border-slate-200/60 dark:border-zinc-850 space-y-2 text-xs font-sans">
+              <div className="flex justify-between items-center text-slate-500 dark:text-zinc-400">
+                <span>Transfer Amount:</span>
+                <span className="font-mono font-semibold">${numericAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-500 dark:text-zinc-400">
+                <span>Processing Network Fee:</span>
+                <span className="font-mono font-semibold text-amber-500">${processingFee.toFixed(2)}</span>
+              </div>
+              <div className="pt-2 border-t border-slate-200/40 dark:border-zinc-800 flex justify-between items-center font-display font-bold text-slate-900 dark:text-white text-sm">
+                <span>Total Debit Amount:</span>
+                <span className="font-mono text-indigo-500">${totalDebitAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Insufficient balance warning block */}
+            {!hasSufficientBalance && numericAmount > 0 && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Insufficient balance to cover transaction and processing fees.</span>
+              </div>
+            )}
           </div>
 
           {/* Optional Memo */}

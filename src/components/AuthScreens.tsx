@@ -396,12 +396,9 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
       if (signUpError) throw signUpError;
 
       if (data.user) {
-        // Flag local session to trigger welcome animation upon auth success hook in App.tsx
-        localStorage.setItem('is_new_registration', 'true');
-
         // Check if the session was immediately resolved (auto-confirmed accounts)
         if (data.session) {
-          setSuccess('Sovereign ledger instantiated successfully! Redirecting...');
+          setSuccess('Account created successfully! Redirecting...');
           
           // CLIENT-SIDE PROFILE CREATION FAILSAFE: Ensure the profiles, wallets, and welcome notifications exist instantly
           const profileWithAllColumns = {
@@ -563,7 +560,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
           </div>
           <div>
             <span className="font-display font-bold text-lg tracking-tight block">NexaBank</span>
-            <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-500 block uppercase -mt-1">Sovereign Custody</span>
+            <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-500 block uppercase -mt-1">Secure Banking</span>
           </div>
         </div>
 
@@ -576,11 +573,11 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
           
           <h1 className="font-display font-bold text-4xl xl:text-5xl leading-tight tracking-tight text-white">
             The Digital Ledger <br />
-            for <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400">Sovereign Wealth.</span>
+            for <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400">Modern Banking.</span>
           </h1>
 
           <p className="text-zinc-400 text-sm xl:text-base font-sans leading-relaxed">
-            Multi-asset decentralized custody, high-performance liquid checking reserves, and automated yield compounding savings vaults configured for absolute regulatory compliance.
+            Multi-asset secure custody, high-performance liquid checking reserves, and automated yield compounding savings vaults configured for absolute regulatory compliance.
           </p>
 
           {/* Real-time Ledger Glassmorphic Panels */}
@@ -633,7 +630,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
               <span className="font-display font-black text-slate-950 text-xl leading-none">N</span>
             </div>
             <h1 className="font-display font-bold text-2xl text-white">NexaBank</h1>
-            <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-mono font-bold mt-0.5">Sovereign Wealth Custody</p>
+            <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-mono font-bold mt-0.5">Secure Retail Banking</p>
           </div>
 
           {/* Configuration Alert Warning */}
