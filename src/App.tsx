@@ -147,7 +147,8 @@ function mapWalletFromDB(db: any): BankWallet {
     mainBalance: Number(db.main_balance),
     availableBalance: Number(db.available_balance),
     pendingBalance: Number(db.pending_balance),
-    savingsBalance: Number(db.savings_balance)
+    savingsBalance: Number(db.savings_balance),
+    investmentBalance: Number(db.investment_balance || 0)
   };
 }
 
@@ -1134,30 +1135,52 @@ export default function App() {
   };
 
   // ADMIN ACTION: Manual direct ledger corrections
-  const handleAdjustWalletBalance = async (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number) => {
+  const handleAdjustWalletBalance = async (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number, accountType: 'checking' | 'savings' | 'investment' = 'checking') => {
     const targetUser = users.find((u) => u.id === userId);
     if (!targetUser) return;
 
     const { data: walletData } = await supabase.from('wallets').select('*').eq('user_id', userId).single();
     if (!walletData) return;
 
-    let nextMain = Number(walletData.main_balance);
-    let nextAvail = Number(walletData.available_balance);
+    let nextMain = Number(walletData.main_balance || 0);
+    let nextAvail = Number(walletData.available_balance || 0);
+    let nextSavings = Number(walletData.savings_balance || 0);
+    let nextInvestment = Number(walletData.investment_balance || 0);
 
-    if (actionType === 'credit' || actionType === 'bonus') {
-      nextMain += amount;
-      nextAvail += amount;
-    } else if (actionType === 'debit') {
-      nextMain = Math.max(0, nextMain - amount);
-      nextAvail = Math.max(0, nextAvail - amount);
-    } else if (actionType === 'adjust') {
-      nextMain = amount;
-      nextAvail = amount;
+    if (accountType === 'investment') {
+      if (actionType === 'credit' || actionType === 'bonus') {
+        nextInvestment += amount;
+      } else if (actionType === 'debit') {
+        nextInvestment = Math.max(0, nextInvestment - amount);
+      } else if (actionType === 'adjust') {
+        nextInvestment = amount;
+      }
+    } else if (accountType === 'savings') {
+      if (actionType === 'credit' || actionType === 'bonus') {
+        nextSavings += amount;
+      } else if (actionType === 'debit') {
+        nextSavings = Math.max(0, nextSavings - amount);
+      } else if (actionType === 'adjust') {
+        nextSavings = amount;
+      }
+    } else {
+      if (actionType === 'credit' || actionType === 'bonus') {
+        nextMain += amount;
+        nextAvail += amount;
+      } else if (actionType === 'debit') {
+        nextMain = Math.max(0, nextMain - amount);
+        nextAvail = Math.max(0, nextAvail - amount);
+      } else if (actionType === 'adjust') {
+        nextMain = amount;
+        nextAvail = amount;
+      }
     }
 
     await supabase.from('wallets').update({
       main_balance: nextMain,
-      available_balance: nextAvail
+      available_balance: nextAvail,
+      savings_balance: nextSavings,
+      investment_balance: nextInvestment
     }).eq('user_id', userId);
 
     await supabase.from('transactions').insert({

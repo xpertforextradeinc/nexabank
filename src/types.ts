@@ -65,6 +65,7 @@ export interface Wallet {
   availableBalance: number;
   pendingBalance: number;
   savingsBalance: number;
+  investmentBalance?: number;
 }
 
 export interface BankTransaction {

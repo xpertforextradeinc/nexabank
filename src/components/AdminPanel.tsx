@@ -23,7 +23,7 @@ interface AdminPanelProps {
   onRejectWithdrawal: (reqId: string) => void;
   onRequireDepositWithdrawal?: (reqId: string, amount: number) => void;
   onUpdateUserDetails: (userId: string, updates: Partial<UserProfile>) => void;
-  onAdjustWalletBalance: (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number) => void;
+  onAdjustWalletBalance: (userId: string, actionType: 'credit' | 'debit' | 'bonus' | 'adjust', amount: number, accountType?: 'checking' | 'savings' | 'investment') => void;
   onCreateCustomer?: (customerData: { name: string; email: string; initialBalance: number; phone?: string; status?: 'active' | 'suspended' | 'frozen' | 'hold' }) => Promise<void>;
   onSeedDemoCustomers?: () => Promise<void>;
   onRefresh: () => void;
@@ -1132,7 +1132,7 @@ export default function AdminPanel({
                               ${((w?.availableBalance || 0) + (w?.savingsBalance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </span>
                           </div>
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setViewUserDetail(u)}
                               className="px-2 py-1 bg-slate-500 hover:bg-slate-600 text-white rounded text-[10px] font-bold shadow-sm transition"
@@ -1149,6 +1149,17 @@ export default function AdminPanel({
                               className="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold shadow-sm transition"
                             >
                               Fund Account
+                            </button>
+                            <button
+                              onClick={() => {
+                                const amt = window.prompt(`Update Investment Account for ${u.name} (USD amount to add):`, '5000');
+                                if (amt && !isNaN(Number(amt)) && Number(amt) > 0) {
+                                  onAdjustWalletBalance(u.id, 'credit', Number(amt), 'investment');
+                                }
+                              }}
+                              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-sm transition"
+                            >
+                              Update Investment
                             </button>
                             <button
                               onClick={() => {
@@ -1205,24 +1216,76 @@ export default function AdminPanel({
           </motion.div>
         )}
 
-        {viewUserDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg text-left">
-              <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white">User Profile Details</h3>
-              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                <p><strong>Name:</strong> {viewUserDetail.name}</p>
-                <p><strong>Email:</strong> {viewUserDetail.email}</p>
-                <p><strong>Phone:</strong> {viewUserDetail.phone || 'N/A'}</p>
-                <p><strong>Role:</strong> {viewUserDetail.role}</p>
-                <p><strong>Status:</strong> {viewUserDetail.status}</p>
-                <p><strong>Crypto Wallet:</strong> {viewUserDetail.assignedCryptoWallet || 'N/A'}</p>
-              </div>
-              <div className="mt-6 flex justify-end">
-                <button onClick={() => setViewUserDetail(null)} className="px-4 py-2 bg-slate-200 dark:bg-zinc-800 rounded-xl">Close</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {viewUserDetail && (() => {
+          const uWallet = getUserWallet(viewUserDetail.id);
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg text-left space-y-4">
+                <h3 className="font-bold text-lg text-slate-800 dark:text-white">Customer Portfolio & Investment Audit</h3>
+                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <p><strong>Name:</strong> {viewUserDetail.name}</p>
+                  <p><strong>Email:</strong> {viewUserDetail.email}</p>
+                  <p><strong>Phone:</strong> {viewUserDetail.phone || 'N/A'}</p>
+                  <p><strong>Role:</strong> {viewUserDetail.role}</p>
+                  <p><strong>Status:</strong> {viewUserDetail.status}</p>
+                  <p><strong>Crypto Wallet:</strong> {viewUserDetail.assignedCryptoWallet || 'N/A'}</p>
+                  
+                  <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400 block">Ledger Accounts</span>
+                    <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+                        <span className="text-[9px] text-slate-400 block">Checking</span>
+                        <span className="font-bold font-mono text-xs text-slate-900 dark:text-white">
+                          ${(uWallet?.availableBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+                        <span className="text-[9px] text-slate-400 block">Savings</span>
+                        <span className="font-bold font-mono text-xs text-slate-900 dark:text-white">
+                          ${(uWallet?.savingsBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+                        <span className="text-[9px] text-indigo-500 block font-bold">Investment Account</span>
+                        <span className="font-bold font-mono text-xs text-indigo-600 dark:text-indigo-400">
+                          ${(uWallet?.investmentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex gap-2">
+                      <button
+                        onClick={() => {
+                          const amt = window.prompt(`Update Investment Account balance for ${viewUserDetail.name} (USD):`, '10000');
+                          if (amt && !isNaN(Number(amt)) && Number(amt) >= 0) {
+                            onAdjustWalletBalance(viewUserDetail.id, 'adjust', Number(amt), 'investment');
+                          }
+                        }}
+                        className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition"
+                      >
+                        Set Investment Balance
+                      </button>
+                      <button
+                        onClick={() => {
+                          const amt = window.prompt(`Add deposit to Investment Account for ${viewUserDetail.name} (USD):`, '5000');
+                          if (amt && !isNaN(Number(amt)) && Number(amt) > 0) {
+                            onAdjustWalletBalance(viewUserDetail.id, 'credit', Number(amt), 'investment');
+                          }
+                        }}
+                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition"
+                      >
+                        Credit Investment
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button onClick={() => setViewUserDetail(null)} className="px-4 py-2 bg-slate-200 dark:bg-zinc-800 rounded-xl text-xs font-semibold">Close</button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
 
         {/* CREATE CUSTOMER MODAL */}
         {showCreateModal && (
