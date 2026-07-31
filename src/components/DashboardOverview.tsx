@@ -162,7 +162,7 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
       </div>
 
       {/* Upper Cards: Real-time Balance Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Metric 1: Main Balance */}
         <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative flex flex-col justify-between overflow-hidden`}>
           {user.status === 'frozen' && (
@@ -246,6 +246,33 @@ export default function DashboardOverview({ user, wallet, transactions, withdraw
               <span className="text-slate-400 font-sans">Monthly Yield:</span>
               <span className="text-emerald-500 font-semibold font-mono flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" /> +$182.40
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 4: Investment Account Balance */}
+        <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} relative flex flex-col justify-between`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-zinc-950 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
+                Investment Account
+              </span>
+              <h3 className="font-display font-bold text-sm leading-tight">Equity & Crypto Portfolio</h3>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <h2 className="text-3xl font-display font-bold tracking-tight">
+              ${(wallet.investmentBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </h2>
+            <div className="flex justify-between items-center mt-3 text-xs">
+              <span className="text-slate-400 font-sans">Admin Status:</span>
+              <span className="text-emerald-500 font-semibold font-mono flex items-center gap-0.5">
+                <Check className="w-3.5 h-3.5" /> Active & Funded
               </span>
             </div>
           </div>
