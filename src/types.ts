@@ -53,6 +53,10 @@ export interface UserProfile {
   pinRequested?: boolean;
   pinRequestDate?: string;
   pinStatus?: 'none' | 'requested' | 'issued' | 'rejected';
+
+  // Increase API
+  increaseEntityId?: string;
+  increaseAccountId?: string;
 }
 
 export interface Wallet {
@@ -138,6 +142,8 @@ export interface CreditCard {
 }
 
 export interface SavingsGoal {
+  id?: string;
+  color?: string;
   name: string;
   current: number;
   target: number;

@@ -84,7 +84,9 @@ function mapProfileFromDB(db: any): UserProfile {
     // Withdrawal PIN Requests
     pinRequested: db.pin_requested,
     pinRequestDate: db.pin_request_date,
-    pinStatus: db.pin_status || (db.withdrawal_pin ? 'issued' : (db.pin_requested ? 'requested' : 'none'))
+    pinStatus: db.pin_status || (db.withdrawal_pin ? 'issued' : (db.pin_requested ? 'requested' : 'none')),
+    increaseEntityId: db.increase_entity_id,
+    increaseAccountId: db.increase_account_id
   };
 }
 
@@ -105,6 +107,8 @@ function mapProfileToDB(p: Partial<UserProfile>): any {
   if (p.pinRequested !== undefined) db.pin_requested = p.pinRequested;
   if (p.pinRequestDate !== undefined) db.pin_request_date = p.pinRequestDate;
   if (p.pinStatus !== undefined) db.pin_status = p.pinStatus;
+  if (p.increaseEntityId !== undefined) db.increase_entity_id = p.increaseEntityId;
+  if (p.increaseAccountId !== undefined) db.increase_account_id = p.increaseAccountId;
   // Onboarding fields mapping to database
   if (p.middleName !== undefined) db.middle_name = p.middleName;
   if (p.dateOfBirth !== undefined) db.date_of_birth = p.dateOfBirth;
@@ -2045,6 +2049,8 @@ export default function App() {
                   card={card} 
                   onToggleFreeze={handleToggleCardFreeze} 
                   onChangeColor={handleChangeCardColor} 
+                  user={currentUser}
+                  isDarkMode={isDarkMode}
                 />
                 <TransactionSimulator 
                   transactions={simulatorTransactions} 
@@ -2057,6 +2063,8 @@ export default function App() {
                   goal={goal} 
                   onAddFunds={handleAddGoalFunds} 
                   checkingBalance={activeUserWallet.availableBalance} 
+                  isDarkMode={isDarkMode}
+                  user={currentUser}
                 />
               </div>
             </div>

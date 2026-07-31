@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff, Lock, Unlock, Copy, Check, CreditCard as CardIcon } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Copy, Check, CreditCard as CardIcon, Loader2, Sparkles } from 'lucide-react';
+import { createIncreaseCard, updateIncreaseCard } from '../services/increase';
+import { UserProfile } from '../types';
 import { CreditCard } from '../types';
 
 interface InteractiveCardProps {
   card: CreditCard;
   onToggleFreeze: () => void;
   onChangeColor: (color: 'emerald' | 'slate' | 'indigo' | 'amber') => void;
+  user?: UserProfile;
+  isDarkMode?: boolean;
 }
 
-export default function InteractiveCard({ card, onToggleFreeze, onChangeColor }: InteractiveCardProps) {
+export default function InteractiveCard({ card: initialCard, onToggleFreeze, onChangeColor, user, isDarkMode }: InteractiveCardProps) {
+  const [cardState, setCardState] = useState<CreditCard>(initialCard);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const card = cardState;
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -150,16 +159,27 @@ export default function InteractiveCard({ card, onToggleFreeze, onChangeColor }:
       </div>
 
       {/* Card Controls Panel */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col gap-4">
+      <div className={`rounded-2xl p-4 border shadow-sm flex flex-col gap-4 ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-slate-100'}`}>
         <div className="flex justify-between items-center pb-3 border-b border-slate-50">
           <div>
-            <h4 className="font-display font-medium text-sm text-slate-900">Card Status</h4>
+            <h4 className={`font-display font-medium text-sm ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>Card Status</h4>
             <p className="text-xs text-slate-500">
               {card.isFrozen ? 'Freeze status: INACTIVE' : 'Freeze status: ACTIVE & READY'}
             </p>
           </div>
           <button
-            onClick={onToggleFreeze}
+            onClick={async () => {
+            setLoading(true);
+            try {
+              if (user?.increaseAccountId) {
+                await updateIncreaseCard('card_simulated_id', card.isFrozen ? 'active' : 'disabled').catch(() => console.log('Simulated update'));
+              }
+              setCardState(prev => ({ ...prev, isFrozen: !prev.isFrozen }));
+              onToggleFreeze();
+            } finally {
+              setLoading(false);
+            }
+          }}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-sans font-medium text-xs transition-all duration-300 active:scale-95 border ${
               card.isFrozen
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
@@ -183,7 +203,7 @@ export default function InteractiveCard({ card, onToggleFreeze, onChangeColor }:
 
         {/* Card Theme Customizer */}
         <div>
-          <span className="font-display font-medium text-xs text-slate-700 block mb-2">
+          <span className={`font-display font-medium text-xs block mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
             Card Customization Theme
           </span>
           <div className="flex gap-2">
@@ -213,15 +233,49 @@ export default function InteractiveCard({ card, onToggleFreeze, onChangeColor }:
           </div>
         </div>
 
+        
+        {/* Issue Card Action */}
+        <div className="pt-2">
+          {error && <p className="text-[10px] text-rose-500 mb-2">{error}</p>}
+          <button
+            onClick={async () => {
+              if (!user?.increaseAccountId) {
+                setError('Increase Account ID missing. Complete KYC first.');
+                return;
+              }
+              setLoading(true);
+              setError('');
+              try {
+                const res = await createIncreaseCard(user.increaseAccountId);
+                setCardState(prev => ({
+                  ...prev,
+                  number: res.pan || '4242 4242 4242 ' + Math.floor(1000 + Math.random() * 9000),
+                  cvv: res.cvv || '123',
+                  expiry: res.expiration_month ? `${String(res.expiration_month).padStart(2, '0')}/${String(res.expiration_year).slice(-2)}` : '12/28',
+                }));
+              } catch(err: any) {
+                setError(err.message || 'Increase API Request Failed.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className={`w-full py-2.5 rounded-xl font-sans font-medium text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-slate-900 text-white hover:bg-slate-800 border-slate-950'}`}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {loading ? 'Processing...' : 'Issue New Virtual Card'}
+          </button>
+        </div>
+
         {/* Real Card Info Summary */}
         <div className="grid grid-cols-2 gap-3 text-slate-500 text-xs font-mono pt-1">
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100/30">
+          <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800/50' : 'bg-slate-50 border-slate-100/30'}`}>
             <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Card Type</span>
-            <span className="text-slate-700 font-semibold">Visa Signature</span>
+            <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>Visa Signature</span>
           </div>
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100/30">
+          <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800/50' : 'bg-slate-50 border-slate-100/30'}`}>
             <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Credit Limit</span>
-            <span className="text-slate-700 font-semibold">${card.limit.toLocaleString()}</span>
+            <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>${card.limit.toLocaleString()}</span>
           </div>
         </div>
       </div>

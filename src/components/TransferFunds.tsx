@@ -6,6 +6,7 @@ import {
   UserCheck, RefreshCw, FileText, Wallet as WalletIcon, CheckCircle
 } from 'lucide-react';
 import { UserProfile, Wallet } from '../types';
+import { createIncreaseTransfer } from '../services/increase';
 
 interface TransferFundsProps {
   user: UserProfile;
@@ -101,7 +102,7 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
     setError('');
   };
 
-  const handleTransferSubmit = (e: FormEvent) => {
+  const handleTransferSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const amt = parseFloat(amount);
@@ -167,7 +168,20 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
       }
 
       setLoading(true);
-      setTimeout(() => {
+      
+      try {
+        if (user.increaseAccountId) {
+          // Call Increase Sandbox API
+          await createIncreaseTransfer({
+            accountId: user.increaseAccountId,
+            amount: Math.round(amt * 100), // convert to cents
+            accountNumber: achAccount,
+            routingNumber: achRouting,
+            memo: memo || 'Transfer from NexaBank'
+          });
+        }
+        
+        // Even if we don't have an increase account (for legacy/demo), we simulate success
         setLoading(false);
         // Use first available user or current user for logging wire discharge
         const fallbackTarget = peerRecipients[0] || user;
@@ -185,8 +199,11 @@ export default function TransferFunds({ user, wallet, usersList, onTransfer, isD
         setAchRecipientName('');
         setAchRouting('');
         setAchAccount('');
-      }, 1500);
-
+        setMemo('');
+      } catch (err: any) {
+        setLoading(false);
+        setError(err.message || 'Increase API ACH transfer failed.');
+      }
     } else if (activeTab === 'swift') {
       if (!swiftRecipientName.trim() || !swiftCode.trim() || !iban.trim()) {
         setError('Please complete all global SWIFT and IBAN details.');

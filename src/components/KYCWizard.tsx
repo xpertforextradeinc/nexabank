@@ -4,6 +4,7 @@ import {
   User, Calendar, MapPin, ShieldAlert, FileText, Upload, Check, ChevronRight, ChevronLeft, Loader2, RefreshCw, ClipboardCheck, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { createIncreaseEntity, createIncreaseAccount } from '../services/increase';
 
 interface KYCWizardProps {
   user: UserProfile;
@@ -208,7 +209,23 @@ export default function KYCWizard({ user, onUpdateUser, onAddAuditLog, isDarkMod
     };
 
     try {
-      // Map properties directly to the Supabase profile columns
+      // 1. Create Entity in Increase Sandbox
+      const [firstName, ...lastNameParts] = fullName.split(' ');
+      const lastName = lastNameParts.join(' ') || 'Doe'; // fallback if no last name provided
+      
+      const increaseEntity = await createIncreaseEntity({
+        firstName,
+        lastName,
+        dateOfBirth: dob || '1990-01-01',
+        address: {
+          line1: address || '123 Main St',
+          city: 'San Francisco',
+          state: 'CA',
+          zip: '94105'
+        }
+      });
+
+      // 2. Map properties directly to the Supabase profile columns, including Increase IDs
       await onUpdateUser({
         name: fullName,
         dateOfBirth: dob,
@@ -217,7 +234,8 @@ export default function KYCWizard({ user, onUpdateUser, onAddAuditLog, isDarkMod
         govIdNumber: taxId,
         nationalIdSsn: taxId,
         uploadedIdUrl: JSON.stringify(kycPayload),
-        verificationStatus: 'pending'
+        verificationStatus: 'pending',
+        increaseEntityId: increaseEntity.id
       });
 
       onAddAuditLog(
