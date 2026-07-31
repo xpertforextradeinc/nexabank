@@ -43,6 +43,33 @@ const COUNTRIES = [
   { code: 'AU', name: 'Australia (+61)' }
 ];
 
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
+  { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'DC', name: 'District of Columbia' },
+  { code: 'FL', name: 'Florida' }, { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' },
+  { code: 'ID', name: 'Idaho' }, { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' },
+  { code: 'IA', name: 'Iowa' }, { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' },
+  { code: 'LA', name: 'Louisiana' }, { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' }, { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' },
+  { code: 'MS', name: 'Mississippi' }, { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' },
+  { code: 'NE', name: 'Nebraska' }, { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' },
+  { code: 'NJ', name: 'New Jersey' }, { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' }, { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' },
+  { code: 'OK', name: 'Oklahoma' }, { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' },
+  { code: 'RI', name: 'Rhode Island' }, { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' },
+  { code: 'TN', name: 'Tennessee' }, { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' }, { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' },
+  { code: 'WV', name: 'West Virginia' }, { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }
+];
+
+const formatSsn = (val: string) => {
+  const digits = val.replace(/\D/g, '').slice(0, 9);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 9)}`;
+};
+
 export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScreensProps) {
   const supabase = getSupabase();
   const [screen, setScreen] = useState<'login' | 'register' | 'forgot' | 'verify'>('login');
@@ -85,10 +112,11 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
   const [regIncome, setRegIncome] = useState('');
   const [regSourceFunds, setRegSourceFunds] = useState('');
 
-  // Step 4: Identity Verification
-  const [regIdType, setRegIdType] = useState('Passport');
+  // Step 4: Identity Verification (US Audience Required Fields)
+  const [regIdType, setRegIdType] = useState('US_DriversLicense');
   const [regIdNumber, setRegIdNumber] = useState('');
-  const [regSsn, setRegSsn] = useState(''); // Optional SSN
+  const [regSsn, setRegSsn] = useState(''); // Required 9-digit SSN / ITIN
+  const [showSsn, setShowSsn] = useState(false);
   const [regIdFileName, setRegIdFileName] = useState('');
 
   // Step 5: Security Credentials
@@ -223,7 +251,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
         return false;
       }
       if (!regState.trim()) {
-        setError('State or province identifier is required.');
+        setError('State or territory selection is required.');
         return false;
       }
       if (!regCity.trim()) {
@@ -234,8 +262,12 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
         setError('ZIP or postal code is required.');
         return false;
       }
+      if (regCountry === 'US' && !/^\d{5}(-\d{4})?$/.test(regZip.trim())) {
+        setError('Please enter a valid 5-digit U.S. ZIP code (e.g., 10001 or 90210).');
+        return false;
+      }
       if (!regAddress.trim()) {
-        setError('Street address is required to satisfy AML/KYC location standards.');
+        setError('Street address is required to satisfy federal AML/KYC location standards.');
         return false;
       }
     }
@@ -269,14 +301,18 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
     if (step === 4) {
       if (!regIdType) {
-        setError('Please select a government identity document class.');
+        setError('Please select a U.S. government identity document class.');
         return false;
       }
       if (!regIdNumber.trim()) {
-        setError('Please enter the government ID document index number.');
+        setError('Please enter your government ID document number.');
         return false;
       }
-      // SSN and Upload ID are optional in Demo Mode
+      const cleanSsn = regSsn.replace(/\D/g, '');
+      if (cleanSsn.length !== 9) {
+        setError('A valid 9-digit U.S. Social Security Number (SSN / ITIN) is required for federal CIP account compliance.');
+        return false;
+      }
     }
 
     if (step === 5) {
@@ -763,18 +799,18 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                   <div className="mb-4 text-left">
                     <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold">Step {regStep} of 5</span>
                     <h2 className="font-display font-bold text-xl text-white">
-                      {regStep === 1 && "Client Identity Details"}
-                      {regStep === 2 && "Residential Coordinates"}
-                      {regStep === 3 && "Institutional Financials"}
-                      {regStep === 4 && "Identity Validation"}
-                      {regStep === 5 && "Sovereign Vault Keys"}
+                      {regStep === 1 && "U.S. Personal Identity Details"}
+                      {regStep === 2 && "U.S. Residential Coordinates"}
+                      {regStep === 3 && "Employment & Financial Profile"}
+                      {regStep === 4 && "Government ID & SSN Verification"}
+                      {regStep === 5 && "Security PIN & Vault Credentials"}
                     </h2>
                     <p className="text-xs text-zinc-400 mt-1">
-                      {regStep === 1 && "Provide your certified legal identity parameters."}
-                      {regStep === 2 && "Establish your residential connection address."}
-                      {regStep === 3 && "Map out your professional profile and funds coordinates."}
-                      {regStep === 4 && "Submit governmental identity reference coordinates."}
-                      {regStep === 5 && "Configure your symmetric passwords and transaction pins."}
+                      {regStep === 1 && "Enter your full legal name and contact details as they appear on your U.S. ID."}
+                      {regStep === 2 && "Enter your primary U.S. residential address for AML/KYC verification."}
+                      {regStep === 3 && "Provide employment status and primary source of funds."}
+                      {regStep === 4 && "Federal CIP regulations require a valid U.S. ID and 9-digit SSN/ITIN."}
+                      {regStep === 5 && "Configure your secure password and 4-digit banking PIN."}
                     </p>
                   </div>
 
@@ -939,7 +975,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         >
                           {/* Country selector */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Country Node</label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Country of Residence</label>
                             <div className="relative">
                               <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                               <select
@@ -959,15 +995,33 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* State & City (grid) */}
                           <div className="grid grid-cols-2 gap-3.5">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">State / Province</label>
-                              <input
-                                type="text"
-                                required
-                                placeholder="NY"
-                                value={regState}
-                                onChange={(e) => { setRegState(e.target.value); setError(''); }}
-                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                              />
+                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                                {regCountry === 'US' ? 'U.S. State / Territory' : 'State / Province'}
+                              </label>
+                              {regCountry === 'US' ? (
+                                <select
+                                  value={regState}
+                                  required
+                                  onChange={(e) => { setRegState(e.target.value); setError(''); }}
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
+                                >
+                                  <option value="">Select State...</option>
+                                  {US_STATES.map((s) => (
+                                    <option key={s.code} value={s.code} className="bg-zinc-950 text-white">
+                                      {s.name} ({s.code})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="NY"
+                                  value={regState}
+                                  onChange={(e) => { setRegState(e.target.value); setError(''); }}
+                                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                />
+                              )}
                             </div>
                             <div className="flex flex-col text-left space-y-1">
                               <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">City</label>
@@ -984,11 +1038,13 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* ZIP/Postal Code */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">ZIP / Postal Code</label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                              {regCountry === 'US' ? 'U.S. ZIP Code' : 'ZIP / Postal Code'}
+                            </label>
                             <input
                               type="text"
                               required
-                              placeholder="10001"
+                              placeholder={regCountry === 'US' ? 'e.g. 10001 or 90210' : 'Postal Code'}
                               value={regZip}
                               onChange={(e) => { setRegZip(e.target.value); setError(''); }}
                               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
@@ -1001,7 +1057,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             <input
                               type="text"
                               required
-                              placeholder="742 Evergreen Terrace"
+                              placeholder="742 Evergreen Terrace, Apt 4B"
                               value={regAddress}
                               onChange={(e) => { setRegAddress(e.target.value); setError(''); }}
                               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
@@ -1103,7 +1159,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                         </motion.div>
                       )}
 
-                      {/* STEP 4: IDENTITY VERIFICATION */}
+                      {/* STEP 4: IDENTITY VERIFICATION (U.S. AUDIENCE REQUIRED FIELDS) */}
                       {regStep === 4 && (
                         <motion.div
                           key="step-4"
@@ -1111,51 +1167,86 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.15 }}
-                          className="space-y-3.5"
+                          className="space-y-4"
                         >
                           {/* ID Type */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Government ID Class</label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                              U.S. Government Identity Document
+                            </label>
                             <select
                               value={regIdType}
                               required
                               onChange={(e) => { setRegIdType(e.target.value); setError(''); }}
                               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium"
                             >
-                              <option value="Passport">Passport Document</option>
-                              <option value="DriversLicense">Drivers License</option>
-                              <option value="NationalID">National ID Card</option>
+                              <option value="US_DriversLicense">U.S. Driver&apos;s License</option>
+                              <option value="US_StateID">U.S. State Issued ID Card</option>
+                              <option value="US_Passport">U.S. Passport / Passport Card</option>
+                              <option value="US_MilitaryID">U.S. Military / DoD ID</option>
+                              <option value="PermanentResidentCard">U.S. Permanent Resident / Green Card</option>
                             </select>
                           </div>
 
                           {/* ID Number */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">ID Document Index Number</label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                              Document ID / License Number
+                            </label>
                             <input
                               type="text"
                               required
-                              placeholder="F9021831"
+                              placeholder="e.g. D12345678 or 9-digit passport index"
                               value={regIdNumber}
                               onChange={(e) => { setRegIdNumber(e.target.value); setError(''); }}
                               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
                             />
                           </div>
 
-                          {/* SSN / National ID (Optional) */}
-                          <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">National ID / SSN <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
-                            <input
-                              type="text"
-                              placeholder="XXX-XX-XXXX"
-                              value={regSsn}
-                              onChange={(e) => { setRegSsn(e.target.value); setError(''); }}
-                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-sans text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                            />
+                          {/* REQUIRED SSN / ITIN with Federal Badge and Toggle Mask */}
+                          <div className="flex flex-col text-left space-y-1.5 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-emerald-400 flex items-center gap-1.5">
+                                <Shield className="w-3.5 h-3.5" />
+                                U.S. Social Security Number (SSN / ITIN)
+                              </label>
+                              <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded uppercase font-bold">
+                                Required • CIP / Patriot Act
+                              </span>
+                            </div>
+                            <div className="relative">
+                              <input
+                                type={showSsn ? "text" : "password"}
+                                required
+                                placeholder="XXX-XX-XXXX"
+                                value={regSsn}
+                                onChange={(e) => {
+                                  const formatted = formatSsn(e.target.value);
+                                  setRegSsn(formatted);
+                                  setError('');
+                                }}
+                                maxLength={11}
+                                className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl font-mono text-sm tracking-wider text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowSsn(!showSsn)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition cursor-pointer"
+                                aria-label="Toggle SSN visibility"
+                              >
+                                {showSsn ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
+                              Federal banking law (USA PATRIOT Act Section 326) requires all U.S. financial institutions to obtain, verify, and record your 9-digit SSN or ITIN. Your number is encrypted with 256-bit AES vault security.
+                            </p>
                           </div>
 
                           {/* Drag and Drop Upload ID (optional) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Upload Verification Document <span className="text-zinc-600 font-sans font-normal">(Optional)</span></label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">
+                              U.S. Government ID Upload (Front & Back) <span className="text-zinc-600 font-sans font-normal">(Optional)</span>
+                            </label>
                             
                             <div
                               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -1239,7 +1330,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                           {/* Passphrase & Confirm side-by-side */}
                           <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Sovereign Passphrase</label>
+                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Secure Account Password</label>
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -1253,7 +1344,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               </div>
                             </div>
                             <div className="flex flex-col text-left space-y-1">
-                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Confirm Passphrase</label>
+                              <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">Confirm Password</label>
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                                 <input
@@ -1273,7 +1364,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                             <button
                               type="button"
                               onClick={() => setShowRegPassword(!showRegPassword)}
-                              className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-all flex items-center gap-1 focus:outline-none"
+                              className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-all flex items-center gap-1 focus:outline-none cursor-pointer"
                             >
                               {showRegPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                               {showRegPassword ? "Hide passwords" : "Show passwords"}
@@ -1282,7 +1373,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
 
                           {/* Transaction PIN (exactly 4 digits) */}
                           <div className="flex flex-col text-left space-y-1">
-                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">4-Digit Transaction PIN</label>
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-zinc-400">4-Digit Security & Banking PIN</label>
                             <div className="relative">
                               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                               <input
@@ -1298,7 +1389,7 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                                 className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl font-mono text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1.5 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-bold tracking-widest"
                               />
                             </div>
-                            <span className="text-[9px] text-zinc-500 leading-normal font-sans block mt-0.5">Required for transfers, withdrawals, and security audits.</span>
+                            <span className="text-[9px] text-zinc-500 leading-normal font-sans block mt-0.5">Required for ATM access, outbound transfers, and identity verification.</span>
                           </div>
 
                           {/* Compliance Checkbox */}
@@ -1309,8 +1400,8 @@ export default function AuthScreens({ onLoginSuccess, onScreenChange }: AuthScre
                               onChange={(e) => { setRegAgree(e.target.checked); setError(''); }}
                               className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-emerald-500 mt-0.5 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                             />
-                            <span className="text-[10px] text-zinc-400 leading-relaxed font-sans">
-                              I hereby authorize account instantiation and declare that all transacted funds conform to legal and regulatory compliance guidelines.
+                            <span className="text-[10px] text-zinc-300 leading-relaxed font-sans">
+                              I certify under penalty of perjury that I am a U.S. resident or authorized individual, that my Social Security Number (SSN/ITIN) and identity details are correct, and that I agree to Nexa Bank&apos;s U.S. Electronic Banking & Privacy Agreement.
                             </span>
                           </label>
                         </motion.div>
