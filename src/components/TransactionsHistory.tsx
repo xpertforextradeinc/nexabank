@@ -1,7 +1,9 @@
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, ArrowUpRight, ArrowDownRight, Coffee, ShoppingBag, Car, DollarSign, HelpCircle, FileDown, Sparkles, Filter, FileText, Printer, X, ShieldCheck 
+  Search, ArrowUpRight, ArrowDownRight, Coffee, ShoppingBag, Car, DollarSign, 
+  HelpCircle, FileDown, Sparkles, Filter, FileText, Printer, X, ShieldCheck, 
+  Check, Download, ChevronLeft, ChevronRight, Lock
 } from 'lucide-react';
 import { BankTransaction, UserProfile, Wallet } from '../types';
 
@@ -19,20 +21,45 @@ const CATEGORY_ICONS: Record<string, ReactNode> = {
   salary: <DollarSign className="w-4 h-4 text-emerald-500" />,
   deposit: <ArrowUpRight className="w-4 h-4 text-emerald-500" />,
   withdrawal: <ArrowDownRight className="w-4 h-4 text-rose-500" />,
-  transfer: <ArrowUpRight className="w-4 h-4 text-indigo-500" />,
-  bonus: <Sparkles className="w-4 h-4 text-yellow-500" />,
-  adjustment: <HelpCircle className="w-4 h-4 text-slate-500" />,
+  transfer: <ArrowUpRight className="w-4 h-4 text-blue-500" />,
+  bonus: <Sparkles className="w-4 h-4 text-amber-400" />,
+  adjustment: <HelpCircle className="w-4 h-4 text-slate-400" />,
 };
 
-export default function TransactionsHistory({ transactions, user, wallet, isDarkMode }: TransactionsHistoryProps) {
+export default function TransactionsHistory({ 
+  transactions, 
+  user, 
+  wallet, 
+  isDarkMode 
+}: TransactionsHistoryProps) {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [downloadingTx, setDownloadingTx] = useState<string | null>(null);
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<BankTransaction | null>(null);
+
+  const currentAvailableBalance = wallet ? wallet.availableBalance : 34820.50;
+
+  // Calculate Running Balance for each transaction
+  const transactionsWithBalance = useMemo(() => {
+    let running = currentAvailableBalance;
+    return transactions.map((tx) => {
+      const rowBal = running;
+      if (tx.type === 'credit') {
+        running = Math.max(0, running - tx.amount);
+      } else {
+        running = running + tx.amount;
+      }
+      return {
+        ...tx,
+        runningBalance: rowBal
+      };
+    });
+  }, [transactions, currentAvailableBalance]);
 
   // Filter logic
-  const filtered = transactions.filter((t) => {
+  const filtered = transactionsWithBalance.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) || 
       t.reference.toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'all' || t.type === filterType;
@@ -52,300 +79,418 @@ export default function TransactionsHistory({ transactions, user, wallet, isDark
     .filter(t => t.type === 'debit')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalFees = transactions
-    .filter(t => t.category === 'transfer' || t.category === 'withdrawal')
-    .length * 1.50; // Estimated processing fee allowance
-
-  const endingBalance = wallet ? wallet.availableBalance : 14250.00;
-  const startingBalance = endingBalance - totalCredits + totalDebits;
+  const netCashFlow = totalCredits - totalDebits;
 
   // Simulated PDF Downloader
-  const handleDownloadReceipt = (txId: string) => {
-    setDownloadingTx(txId);
+  const handleDownloadReceipt = (tx: BankTransaction) => {
+    setDownloadingTx(tx.id);
+    setSelectedTxForReceipt(tx);
     setTimeout(() => {
       setDownloadingTx(null);
-      alert(`Official transaction statement and PDF receipt for reference ${txId} generated and compiled successfully.`);
-    }, 1500);
+    }, 600);
+  };
+
+  // Export CSV
+  const handleExportCSV = () => {
+    const headers = ['Date', 'Description', 'Category', 'Reference', 'Type', 'Amount', 'Status'];
+    const rows = filtered.map(t => [
+      new Date(t.date).toISOString().split('T')[0],
+      `"${t.description.replace(/"/g, '""')}"`,
+      t.category,
+      t.reference,
+      t.type,
+      t.type === 'credit' ? `+${t.amount.toFixed(2)}` : `-${t.amount.toFixed(2)}`,
+      t.status
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `NexaBank_Statement_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className={`p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-slate-100 shadow-sm text-slate-900'} text-left w-full`}>
+    <div className="flex flex-col gap-6 w-full text-left">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100/10 mb-6">
+      {/* HEADER WITH SUMMARY & EXPORT */}
+      <div className={`p-5 sm:p-7 rounded-2xl sm:rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+        isDarkMode 
+          ? 'bg-[#0B1E36] border-blue-900/50 text-white card-glow-dark' 
+          : 'bg-white border-slate-200/90 shadow-sm text-slate-900'
+      }`}>
         <div>
-          <h3 className="font-display font-bold text-lg">Transaction Ledger Ledger</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Audit complete historical records and transaction roots.</p>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowStatementModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-          id="btn-export-statement"
-        >
-          <FileText className="w-4 h-4 text-emerald-400" />
-          <span>Export Statement</span>
-        </motion.button>
-      </div>
-
-      {/* Advanced Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by description or TX Reference..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-150 dark:border-zinc-850 rounded-xl font-sans text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500 transition"
-          />
+          <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-500 font-bold block mb-1">
+            Account Ledger
+          </span>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Transactions & Settlement History</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Comprehensive audit log of all account deposits, debits, wires, and compounding yield.
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {/* Type Filter */}
-          <div className="flex bg-slate-100 dark:bg-zinc-950 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-850">
-            {(['all', 'credit', 'debit'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-3 py-1 rounded-lg font-sans font-medium text-xs uppercase tracking-wider transition ${
-                  filterType === type 
-                    ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-emerald-400 shadow-sm font-semibold' 
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleExportCSV}
+            className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition ${
+              isDarkMode 
+                ? 'bg-[#0A192F] border-blue-900/60 hover:bg-[#0F2744] text-slate-200' 
+                : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'
+            }`}
+          >
+            <Download className="w-3.5 h-3.5 text-blue-500" />
+            <span>Export CSV</span>
+          </button>
 
-          {/* Category Selector dropdown */}
-          <div className="relative flex items-center bg-slate-50 dark:bg-zinc-950 px-3 py-1.5 rounded-xl border border-slate-150 dark:border-zinc-850">
-            <Filter className="w-3.5 h-3.5 text-slate-400 mr-2" />
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-transparent text-xs text-slate-600 dark:text-zinc-300 focus:outline-none pr-3 capitalize font-semibold font-sans cursor-pointer"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
+          <button
+            onClick={() => setShowStatementModal(true)}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+          >
+            <FileText className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Monthly Statement</span>
+          </button>
         </div>
       </div>
 
-      {/* Table / List */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[650px] flex flex-col gap-2.5">
-          {/* Header titles */}
-          <div className="grid grid-cols-12 gap-3.5 px-4 text-[10px] font-mono text-slate-400 uppercase font-semibold pb-1 border-b border-slate-100/5">
-            <div className="col-span-5">Transaction root & Date</div>
-            <div className="col-span-2">Category</div>
-            <div className="col-span-2">Reference ID</div>
-            <div className="col-span-2 text-right">Settled Amount</div>
-            <div className="col-span-1 text-center">Receipt</div>
+      {/* CASHFLOW SUMMARY MINI CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className={`p-4 rounded-2xl border ${
+          isDarkMode ? 'bg-[#0B1E36]/80 border-blue-900/40 text-white' : 'bg-white border-slate-200/80 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Total Inflows</span>
+            <span className="text-emerald-500 font-bold font-mono">+{transactions.filter(t => t.type === 'credit').length} TX</span>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold font-mono text-emerald-500 mt-1">
+            +${totalCredits.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
+
+        <div className={`p-4 rounded-2xl border ${
+          isDarkMode ? 'bg-[#0B1E36]/80 border-blue-900/40 text-white' : 'bg-white border-slate-200/80 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Total Outflows</span>
+            <span className="text-slate-400 font-bold font-mono">-{transactions.filter(t => t.type === 'debit').length} TX</span>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-1">
+            -${totalDebits.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
+
+        <div className={`p-4 rounded-2xl border ${
+          isDarkMode ? 'bg-[#0B1E36]/80 border-blue-900/40 text-white' : 'bg-white border-slate-200/80 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Net Period Delta</span>
+            <span className={`text-[11px] font-bold font-mono ${netCashFlow >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {netCashFlow >= 0 ? 'SURPLUS' : 'DEFICIT'}
+            </span>
+          </div>
+          <p className={`text-xl sm:text-2xl font-bold font-mono mt-1 ${netCashFlow >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {netCashFlow >= 0 ? '+' : ''}${netCashFlow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
+      </div>
+
+      {/* FILTER & SEARCH BAR */}
+      <div className={`p-4 sm:p-5 rounded-2xl border ${
+        isDarkMode ? 'bg-[#0B1E36] border-blue-900/50' : 'bg-white border-slate-200/80 shadow-sm'
+      }`}>
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search description, merchant, or reference ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#0A192F] border border-slate-200 dark:border-blue-900/60 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-slate-800 dark:text-slate-100"
+            />
           </div>
 
-          <AnimatePresence initial={false}>
-            {filtered.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 flex flex-col items-center justify-center gap-2">
-                <HelpCircle className="w-8 h-8 opacity-45" />
-                <span className="text-xs font-semibold">No records match filter query.</span>
-                <p className="text-[10px]">Adjust active search constraints or type categories.</p>
-              </div>
-            ) : (
-              filtered.map((tx) => (
-                <motion.div
-                  key={tx.id}
-                  initial={{ opacity: 0, y: 3 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="grid grid-cols-12 gap-3.5 px-4 py-3.5 hover:bg-slate-50/5 border border-slate-100/10 hover:border-slate-100/20 rounded-xl items-center text-xs"
+          <div className="flex flex-wrap gap-2.5 items-center">
+            {/* Type selector */}
+            <div className="flex bg-slate-100 dark:bg-[#0A192F] p-1 rounded-xl border border-slate-200 dark:border-blue-900/60">
+              {(['all', 'credit', 'debit'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider transition ${
+                    filterType === type 
+                      ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
                 >
-                  {/* Info */}
-                  <div className="col-span-5 flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 dark:bg-zinc-950 rounded-xl border border-slate-200/5">
-                      {CATEGORY_ICONS[tx.category] || <HelpCircle className="w-4 h-4 text-slate-500" />}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-800 dark:text-white leading-tight">{tx.description}</h4>
-                      <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{tx.date}</span>
-                    </div>
-                  </div>
+                  {type === 'all' ? 'All Types' : type === 'credit' ? 'Inflows' : 'Outflows'}
+                </button>
+              ))}
+            </div>
 
-                  {/* Category */}
-                  <div className="col-span-2">
-                    <span className="px-2.5 py-1 bg-slate-100 dark:bg-zinc-950 rounded-full text-[9px] uppercase font-mono tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
-                      {tx.category}
-                    </span>
-                  </div>
-
-                  {/* Reference */}
-                  <div className="col-span-2 font-mono text-[10px] text-slate-400">
-                    {tx.reference}
-                  </div>
-
-                  {/* Settled Amount */}
-                  <div className="col-span-2 text-right">
-                    <span className={`font-mono font-bold ${tx.type === 'credit' ? 'text-emerald-500' : 'text-slate-500 dark:text-zinc-300'}`}>
-                      {tx.type === 'credit' ? '+' : '-'}${tx.amount.toFixed(2)}
-                    </span>
-                    <span className="block text-[8px] text-slate-400 capitalize">{tx.status}</span>
-                  </div>
-
-                  {/* Receipt Download button */}
-                  <div className="col-span-1 text-center">
-                    <button
-                      onClick={() => handleDownloadReceipt(tx.id)}
-                      disabled={downloadingTx === tx.id}
-                      className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/10 rounded-lg transition disabled:opacity-40"
-                      title="Download compliance PDF Receipt"
-                      id={`btn-receipt-${tx.id}`}
-                    >
-                      <FileDown className={`w-4 h-4 ${downloadingTx === tx.id ? 'animate-spin text-indigo-500' : ''}`} />
-                    </button>
-                  </div>
-
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
+            {/* Category dropdown */}
+            <div className="flex items-center bg-slate-50 dark:bg-[#0A192F] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-blue-900/60">
+              <Filter className="w-3.5 h-3.5 text-slate-400 mr-2" />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="bg-transparent text-xs text-slate-700 dark:text-slate-200 focus:outline-none pr-3 capitalize font-semibold cursor-pointer"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Official Statement Modal */}
+      {/* PROFESSIONAL BANKING TRANSACTIONS TABLE */}
+      <div className={`p-5 sm:p-7 rounded-2xl sm:rounded-3xl border transition-all ${
+        isDarkMode 
+          ? 'bg-[#0B1E36] border-blue-900/50 text-white card-glow-dark' 
+          : 'bg-white border-slate-200/90 shadow-sm text-slate-900'
+      }`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="border-b border-slate-200/80 dark:border-blue-900/40 text-[11px] font-mono uppercase text-slate-400">
+                <th className="py-3.5 px-3.5 font-semibold">Date</th>
+                <th className="py-3.5 px-3.5 font-semibold">Description</th>
+                <th className="py-3.5 px-3.5 font-semibold">Category</th>
+                <th className="py-3.5 px-3.5 font-semibold text-right">Amount</th>
+                <th className="py-3.5 px-3.5 font-semibold text-right">Balance</th>
+                <th className="py-3.5 px-3.5 font-semibold text-center">Status</th>
+                <th className="py-3.5 px-3.5 font-semibold text-center">Receipt</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-blue-900/20 text-xs">
+              {filtered.map((tx) => {
+                const isCredit = tx.type === 'credit';
+                const txDate = new Date(tx.date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+
+                return (
+                  <tr 
+                    key={tx.id} 
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition group"
+                  >
+                    {/* Date */}
+                    <td className="py-4 px-3.5 whitespace-nowrap font-mono text-slate-500 dark:text-slate-400">
+                      {txDate}
+                    </td>
+
+                    {/* Description */}
+                    <td className="py-4 px-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-slate-100 dark:bg-[#0A192F] border border-slate-200/60 dark:border-blue-900/50 shrink-0">
+                          {CATEGORY_ICONS[tx.category] || <HelpCircle className="w-4 h-4 text-slate-400" />}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold block truncate text-slate-800 dark:text-slate-100">
+                            {tx.description}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400 block truncate">
+                            Ref: {tx.reference}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td className="py-4 px-3.5 whitespace-nowrap">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold capitalize bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {tx.category}
+                      </span>
+                    </td>
+
+                    {/* Amount */}
+                    <td className={`py-4 px-3.5 whitespace-nowrap text-right font-mono font-bold ${
+                      isCredit ? 'text-emerald-500' : 'text-slate-800 dark:text-slate-100'
+                    }`}>
+                      {isCredit ? '+' : '-'}${tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+
+                    {/* Running Balance */}
+                    <td className="py-4 px-3.5 whitespace-nowrap text-right font-mono font-semibold text-slate-600 dark:text-slate-300">
+                      ${tx.runningBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-4 px-3.5 whitespace-nowrap text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        <Check className="w-3 h-3" />
+                        Completed
+                      </span>
+                    </td>
+
+                    {/* Receipt Action */}
+                    <td className="py-4 px-3.5 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleDownloadReceipt(tx)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
+                        title="View Official Receipt"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <HelpCircle className="w-8 h-8 opacity-40" />
+                      <span className="font-semibold">No transactions match your search filter</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* RECEIPT VIEW MODAL */}
       <AnimatePresence>
-        {showStatementModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        {selectedTxForReceipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-10 text-slate-900 dark:text-white relative"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`max-w-md w-full p-6 sm:p-7 rounded-3xl border shadow-2xl relative ${
+                isDarkMode ? 'bg-[#0B1E36] border-blue-900 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
             >
-              {/* Close Button */}
               <button
-                onClick={() => setShowStatementModal(false)}
-                className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-zinc-900 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+                onClick={() => setSelectedTxForReceipt(null)}
+                className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Statement Header */}
-              <div className="border-b border-slate-200 dark:border-zinc-800 pb-6 mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-display font-bold tracking-tight">NEXA BANK, N.A.</h2>
-                    <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">OFFICIAL STATEMENT OF ACCOUNT</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Statement Date</span>
-                    <span className="text-xs font-mono font-semibold">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-
-                {/* Account Details Block */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 text-xs">
-                  <div>
-                    <span className="text-slate-400 font-mono text-[10px] uppercase block">Account Holder</span>
-                    <span className="font-semibold font-sans mt-0.5 block">{user?.name || 'Valued Client'}</span>
-                    <span className="text-[11px] text-slate-500">{user?.email || 'client@nexabank.com'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 font-mono text-[10px] uppercase block">Account Number (Masked)</span>
-                    <span className="font-mono font-semibold mt-0.5 block">•••• {user?.accountNumber ? user.accountNumber.slice(-4) : '4829'}</span>
-                    <span className="text-[10px] text-emerald-500 font-mono flex items-center gap-1 mt-0.5">
-                      <ShieldCheck className="w-3 h-3" /> FDIC Insured Up to $250,000
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 font-mono text-[10px] uppercase block">Routing Number (ABA)</span>
-                    <span className="font-mono font-semibold mt-0.5 block">{user?.routingNumber || '021000021'}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Federal Reserve Bank NY</span>
-                  </div>
+                <div>
+                  <h3 className="font-bold text-base">NexaBank Transaction Receipt</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">Official Settled Record</p>
                 </div>
               </div>
 
-              {/* Summary Ledger Matrix */}
-              <div className="mb-8">
-                <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400 font-bold mb-3">Summary Ledger Matrix</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Starting Balance</span>
-                    <span className="font-mono font-bold text-sm mt-1 block">${startingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Settled Credits</span>
-                    <span className="font-mono font-bold text-sm text-emerald-500 mt-1 block">+${totalCredits.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Settled Debits</span>
-                    <span className="font-mono font-bold text-sm text-slate-600 dark:text-zinc-300 mt-1 block">-${totalDebits.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Network Fees Paid</span>
-                    <span className="font-mono font-bold text-sm text-amber-500 mt-1 block">${totalFees.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase block">Ending Balance</span>
-                    <span className="font-mono font-bold text-sm text-indigo-500 mt-1 block">${endingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0A192F] border border-slate-200/60 dark:border-blue-900/40 space-y-3 font-mono text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Reference:</span>
+                  <span className="font-bold">{selectedTxForReceipt.reference}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Date:</span>
+                  <span>{new Date(selectedTxForReceipt.date).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Description:</span>
+                  <span className="font-sans font-medium text-right max-w-[200px] truncate">{selectedTxForReceipt.description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Category:</span>
+                  <span className="capitalize">{selectedTxForReceipt.category}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-blue-900/40 text-sm">
+                  <span className="text-slate-400">Amount:</span>
+                  <span className={`font-bold ${selectedTxForReceipt.type === 'credit' ? 'text-emerald-500' : 'text-slate-900 dark:text-white'}`}>
+                    {selectedTxForReceipt.type === 'credit' ? '+' : '-'}${selectedTxForReceipt.amount.toFixed(2)}
+                  </span>
                 </div>
               </div>
 
-              {/* Itemized Ledger List */}
-              <div className="space-y-4 mb-8">
-                <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400 font-bold">Itemized Transaction Records ({transactions.length} entries)</h4>
-                <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
-                  <div className="grid grid-cols-12 bg-slate-100 dark:bg-zinc-900 px-4 py-2.5 text-[10px] font-mono uppercase font-bold text-slate-500">
-                    <div className="col-span-3">Date</div>
-                    <div className="col-span-4">Description / Reference</div>
-                    <div className="col-span-2">Type</div>
-                    <div className="col-span-3 text-right">Net Amount</div>
-                  </div>
-                  <div className="divide-y divide-slate-100 dark:divide-zinc-900 max-h-60 overflow-y-auto">
-                    {transactions.map((tx) => (
-                      <div key={tx.id} className="grid grid-cols-12 px-4 py-2.5 text-xs items-center">
-                        <div className="col-span-3 font-mono text-[11px] text-slate-400">{tx.date}</div>
-                        <div className="col-span-4">
-                          <span className="font-semibold block leading-tight">{tx.description}</span>
-                          <span className="font-mono text-[9px] text-slate-400">{tx.reference}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-mono uppercase font-bold bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400">
-                            {tx.type}
-                          </span>
-                        </div>
-                        <div className={`col-span-3 text-right font-mono font-bold ${tx.type === 'credit' ? 'text-emerald-500' : 'text-slate-700 dark:text-zinc-300'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}${tx.amount.toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
+              <div className="mt-6 flex items-center gap-3">
                 <button
-                  onClick={() => setShowStatementModal(false)}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-zinc-900 transition"
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
                 >
-                  Close Statement
+                  <Printer className="w-4 h-4" />
+                  <span>Print</span>
                 </button>
                 <button
-                  onClick={() => window.print()}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-800 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition"
+                  onClick={() => setSelectedTxForReceipt(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition"
                 >
-                  <Printer className="w-4 h-4 text-emerald-400" />
-                  <span>Print / Download PDF</span>
+                  Done
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
+      {/* STATEMENT MODAL */}
+      <AnimatePresence>
+        {showStatementModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`max-w-lg w-full p-6 sm:p-8 rounded-3xl border shadow-2xl relative ${
+                isDarkMode ? 'bg-[#0B1E36] border-blue-900 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <button
+                onClick={() => setShowStatementModal(false)}
+                className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-500 flex items-center justify-center">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Generate Monthly Statement</h3>
+                  <p className="text-xs text-slate-400">PDF Certified Account Transcript</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
+                Download a fully verified, cryptographic bank statement including all transaction hashes, tax identifiers, and official ledger sign-offs.
+              </p>
+
+              <div className="space-y-3 mb-6 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0A192F] border border-slate-200/60 dark:border-blue-900/40 flex justify-between">
+                  <span className="text-slate-400 font-sans">Period:</span>
+                  <span className="font-bold">August 1, 2026 - August 31, 2026</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0A192F] border border-slate-200/60 dark:border-blue-900/40 flex justify-between">
+                  <span className="text-slate-400 font-sans">Total Transaction Volume:</span>
+                  <span className="font-bold">${(totalCredits + totalDebits).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    handleExportCSV();
+                    setShowStatementModal(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Statement (PDF)</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

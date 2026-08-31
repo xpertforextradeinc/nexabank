@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Shield, Sparkles, LogOut, Bell, Clock, Compass, HelpCircle, ChevronRight, 
+  Shield, ShieldCheck, Sparkles, LogOut, Bell, Clock, Compass, HelpCircle, ChevronRight, 
   RefreshCw, BarChart3, TrendingUp, Settings, History, Send, ArrowUpRight, 
   ArrowDownRight, Wallet as WalletIcon, User, Menu, X, Award, Eye, Key, AlertTriangle, 
   CreditCard as CardIcon, ShieldAlert, ListFilter, Users as UsersIcon, Database, Terminal,
@@ -18,6 +18,9 @@ import { getSupabase, isSupabaseConfigured } from './lib/supabase';
 // Reusable components
 import AuthScreens from './components/AuthScreens';
 import DashboardOverview from './components/DashboardOverview';
+import AccountsView from './components/AccountsView';
+import AnalyticsView from './components/AnalyticsView';
+import PaymentsView from './components/PaymentsView';
 import DepositWithdraw from './components/DepositWithdraw';
 import TransferFunds from './components/TransferFunds';
 import TransactionsHistory from './components/TransactionsHistory';
@@ -142,13 +145,17 @@ function mapProfileToDB(p: Partial<UserProfile>): any {
 }
 
 function mapWalletFromDB(db: any): BankWallet {
+  const mainVal = Number(db.main_balance ?? 0);
+  const availVal = (db.available_balance !== undefined && db.available_balance !== null)
+    ? Number(db.available_balance)
+    : mainVal;
   return {
     userId: db.user_id,
-    mainBalance: Number(db.main_balance),
-    availableBalance: Number(db.available_balance),
-    pendingBalance: Number(db.pending_balance),
-    savingsBalance: Number(db.savings_balance),
-    investmentBalance: Number(db.investment_balance || 0)
+    mainBalance: mainVal,
+    availableBalance: availVal,
+    pendingBalance: Number(db.pending_balance ?? 0),
+    savingsBalance: Number(db.savings_balance ?? 0),
+    investmentBalance: Number(db.investment_balance ?? 0)
   };
 }
 
@@ -516,9 +523,9 @@ export default function App() {
         if (nRes.data) setNotifications(nRes.data.map(mapNotificationFromDB));
 
       } else {
-        // Regular User Sandbox queries
+        // Regular User Sandbox queries: fetch wallet balances with required columns
         const [wRes, tRes, dRes, wiRes, nRes] = await Promise.all([
-          supabase.from('wallets').select('*').eq('user_id', userId).single(),
+          supabase.from('wallets').select('user_id, main_balance, available_balance, pending_balance, savings_balance, investment_balance').eq('user_id', userId).single(),
           supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
           supabase.from('deposits').select('*').eq('user_id', userId).order('date', { ascending: false }),
           supabase.from('withdrawals').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -1401,33 +1408,33 @@ export default function App() {
           <div className="flex-1 flex flex-col min-w-0 lg:pl-72 min-h-screen">
             
             {/* MOBILE TOP NAVIGATION BAR */}
-            <div className={`lg:hidden flex items-center justify-between px-6 py-4 border-b ${
-              isDarkMode ? 'bg-zinc-950 border-zinc-900 text-white' : 'bg-white border-slate-100 text-slate-900'
+            <div className={`lg:hidden flex items-center justify-between px-5 py-3.5 border-b ${
+              isDarkMode ? 'bg-[#0B1E36] border-blue-900/40 text-white' : 'bg-white border-slate-200/90 text-slate-900'
             }`}>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsMobileSidebarOpen(true)}
-                  className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-900 transition"
+                  className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-blue-900/30 transition cursor-pointer"
                   id="mobile-hamburger-trigger"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center border border-emerald-400 shrink-0">
-                    <span className="font-display font-bold text-slate-950 text-sm leading-none">N</span>
+                    <span className="font-display font-extrabold text-slate-950 text-sm leading-none">N</span>
                   </div>
                   <span className="font-display font-bold text-sm tracking-tight">NexaBank</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 px-2.5 py-1 rounded-lg font-mono text-[10px] text-slate-500">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{currentTime.split(' ')[0] || '00:00:00'}</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-semibold">
+                  <Shield className="w-3 h-3" />
+                  <span>Secure</span>
                 </div>
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-900"
+                  className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-blue-900/30 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-amber-400" />
                 </button>
@@ -1435,22 +1442,29 @@ export default function App() {
             </div>
 
             {/* DESKTOP STATUS BAR LEDGER INDICATOR */}
-            <div className={`hidden lg:flex items-center justify-between px-8 py-4 border-b ${
-              isDarkMode ? 'bg-zinc-950/40 border-zinc-900/50 text-zinc-400' : 'bg-white border-slate-100 text-slate-500'
+            <div className={`hidden lg:flex items-center justify-between px-8 py-3.5 border-b ${
+              isDarkMode ? 'bg-[#0B1E36]/90 border-blue-900/40 text-slate-400' : 'bg-white border-slate-200/90 text-slate-500'
             }`}>
-              <div className="text-xs font-mono font-medium flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-                <span>NEXABANK MAIN NET COMPLIANCE ACTIVE</span>
+              <div className="flex items-center gap-4 text-xs font-mono">
+                <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+                  <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="tracking-wide">NEXABANK SECURE NODE</span>
+                </div>
+                <span className="text-slate-300 dark:text-blue-900">•</span>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>FDIC Insured up to $250,000</span>
+                </div>
               </div>
               
-              <div className="flex items-center gap-5">
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-900 border border-slate-200/50 dark:border-zinc-850 px-3.5 py-1.5 rounded-xl font-mono text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                  <Clock className="w-3.5 h-3.5 text-slate-400 animate-pulse" />
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-slate-100/80 dark:bg-[#0A192F] border border-slate-200/70 dark:border-blue-900/60 px-3 py-1 rounded-xl font-mono text-slate-600 dark:text-slate-300 text-[11px] font-medium">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
                   <span>{currentTime || '00:00:00 UTC'}</span>
                 </div>
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-150 dark:hover:bg-zinc-900 transition"
+                  className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-blue-900/30 transition cursor-pointer"
                   title="Toggle Light / Dark Mode"
                 >
                   <Sparkles className="w-4 h-4 text-amber-400" />
@@ -1494,19 +1508,21 @@ export default function App() {
 
     // Menu list configurations
     const userMenuItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: Compass },
-      { id: 'accounts', label: 'Accounts', icon: Landmark },
-      { id: 'deposit', label: 'Deposit', icon: ArrowUpRight },
-      { id: 'withdraw', label: 'Withdraw', icon: ArrowDownRight },
-      { id: 'tax_filing', label: 'File Taxes', icon: FileText },
-      { id: 'transfer', label: 'Transfer', icon: Send },
-      { id: 'transactions', label: 'Transactions', icon: History },
-      { id: 'cards', label: 'Cards', icon: CardIcon },
-      { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined },
-      { id: 'profile', label: 'Profile', icon: User },
-      { id: 'security', label: 'Security', icon: Shield },
-      { id: 'settings', label: 'Settings', icon: Settings },
-      { id: 'support', label: 'Support', icon: HelpCircle }
+      { id: 'dashboard', label: 'Overview', icon: Compass, section: 'MAIN BANKING' },
+      { id: 'accounts', label: 'Accounts', icon: Landmark, section: 'MAIN BANKING' },
+      { id: 'transfer', label: 'Transfers', icon: Send, section: 'MAIN BANKING' },
+      { id: 'payments', label: 'Payments', icon: CardIcon, section: 'MAIN BANKING' },
+      { id: 'cards', label: 'Cards', icon: Shield, section: 'MAIN BANKING' },
+      
+      { id: 'transactions', label: 'Transactions', icon: History, section: 'INSIGHTS & RECORDS' },
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, section: 'INSIGHTS & RECORDS' },
+      { id: 'deposit', label: 'Deposit Cash', icon: ArrowUpRight, section: 'INSIGHTS & RECORDS' },
+      { id: 'withdraw', label: 'Withdraw', icon: ArrowDownRight, section: 'INSIGHTS & RECORDS' },
+      
+      { id: 'security', label: 'Security Center', icon: Key, section: 'SECURITY & SETTINGS' },
+      { id: 'settings', label: 'Settings', icon: Settings, section: 'SECURITY & SETTINGS' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'SECURITY & SETTINGS', badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined },
+      { id: 'support', label: 'Support', icon: HelpCircle, section: 'SECURITY & SETTINGS' }
     ];
 
     const pendingInboundCount = users.filter(u => u.verificationStatus === 'pending').length +
@@ -1520,17 +1536,17 @@ export default function App() {
       }).length;
 
     const adminMenuItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: Activity },
-      { id: 'inbound_requests', label: 'Inbound Requests', icon: ClipboardList, badge: pendingInboundCount || undefined },
-      { id: 'users', label: 'Users', icon: UsersIcon },
-      { id: 'wallet_mgmt', label: 'Wallet Management', icon: WalletIcon },
-      { id: 'deposits', label: 'Deposits', icon: ArrowUpRight, badge: deposits.filter(d => d.status === 'pending').length || undefined },
-      { id: 'withdrawals', label: 'Withdrawals', icon: ArrowDownRight, badge: withdrawals.filter(w => w.status === 'pending').length || undefined },
-      { id: 'transactions', label: 'Transactions', icon: History },
-      { id: 'audit', label: 'Audit Logs', icon: Terminal },
-      { id: 'reports', label: 'Reports', icon: FileText },
-      { id: 'notifications', label: 'Notifications', icon: Bell },
-      { id: 'settings', label: 'Settings', icon: Settings }
+      { id: 'dashboard', label: 'Dashboard', icon: Activity, section: 'ADMIN CONTROL' },
+      { id: 'inbound_requests', label: 'Inbound Requests', icon: ClipboardList, section: 'ADMIN CONTROL', badge: pendingInboundCount || undefined },
+      { id: 'users', label: 'Users', icon: UsersIcon, section: 'ADMIN CONTROL' },
+      { id: 'wallet_mgmt', label: 'Wallet Management', icon: WalletIcon, section: 'ADMIN CONTROL' },
+      { id: 'deposits', label: 'Deposits', icon: ArrowUpRight, section: 'ADMIN CONTROL', badge: deposits.filter(d => d.status === 'pending').length || undefined },
+      { id: 'withdrawals', label: 'Withdrawals', icon: ArrowDownRight, section: 'ADMIN CONTROL', badge: withdrawals.filter(w => w.status === 'pending').length || undefined },
+      { id: 'transactions', label: 'Transactions', icon: History, section: 'ADMIN CONTROL' },
+      { id: 'audit', label: 'Audit Logs', icon: Terminal, section: 'ADMIN CONTROL' },
+      { id: 'reports', label: 'Reports', icon: FileText, section: 'ADMIN CONTROL' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'ADMIN CONTROL' },
+      { id: 'settings', label: 'Settings', icon: Settings, section: 'ADMIN CONTROL' }
     ];
 
     const targetList = isAdmin ? adminMenuItems : userMenuItems;
@@ -1539,6 +1555,9 @@ export default function App() {
     const filteredList = targetList.filter((item) =>
       item.label.toLowerCase().includes(menuSearchQuery.toLowerCase())
     );
+
+    // Group items by section
+    const sections = Array.from(new Set(filteredList.map(item => item.section)));
 
     const handleMenuSelection = (tabId: string) => {
       setCurrentTab(tabId);
@@ -1560,18 +1579,21 @@ export default function App() {
 
     return (
       <div className="flex flex-col h-full justify-between gap-6 select-none text-left">
-        <div className="space-y-6">
+        <div className="space-y-5">
           
           {/* Top Logo & Title */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8.5 h-8.5 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 shadow-sm shrink-0">
-                <span className="font-display font-bold text-slate-950 text-lg leading-none">N</span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 shadow-sm shrink-0">
+                <span className="font-display font-extrabold text-slate-950 text-base leading-none">N</span>
               </div>
               <div>
-                <span className="font-display font-bold text-base tracking-tight block">NexaBank</span>
-                <span className="text-[9px] font-mono font-bold tracking-wider text-slate-400 block uppercase -mt-0.5">
-                  {isAdmin ? 'Admin Terminal' : 'Custody Node'}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-display font-bold text-base tracking-tight block">NexaBank</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <span className="text-[9px] font-mono font-semibold text-slate-400 block uppercase -mt-0.5">
+                  {isAdmin ? 'Admin Terminal' : 'Commercial Banking'}
                 </span>
               </div>
             </div>
@@ -1589,88 +1611,93 @@ export default function App() {
           {/* User / Officer Info Segment */}
           <div 
             onClick={() => handleMenuSelection('profile')}
-            className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-500/40 transition group ${
-              isDarkMode ? 'bg-zinc-900/50 border-zinc-800' : 'bg-slate-50/50 border-slate-100 shadow-sm'
+            className={`p-3 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer hover:border-blue-500/50 transition group ${
+              isDarkMode ? 'bg-[#0B1E36]/80 border-blue-900/40' : 'bg-slate-50 border-slate-200/80 shadow-sm'
             }`}
-            title="Click to view & update personal details"
+            title="Click to view & update profile"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
                 referrerPolicy="no-referrer"
-                className="w-9 h-9 rounded-full object-cover border border-slate-200/50 shrink-0 group-hover:scale-105 transition"
+                className="w-8.5 h-8.5 rounded-full object-cover border border-slate-200/50 shrink-0"
               />
               <div className="min-w-0">
-                <span className="text-xs font-bold block truncate group-hover:text-indigo-500 transition">{currentUser.name}</span>
-                <span className="text-[10px] font-mono text-slate-400 block truncate -mt-0.5">{currentUser.email}</span>
+                <span className="text-xs font-bold block truncate group-hover:text-blue-500 transition">{currentUser.name}</span>
+                <span className="text-[10px] font-mono text-slate-400 block truncate">{currentUser.email}</span>
                 <span className="text-[8px] font-mono font-bold text-emerald-500 block uppercase mt-0.5">
-                  ● STATUS: {currentUser.status.toUpperCase()}
+                  ● {currentUser.status.toUpperCase()}
                 </span>
               </div>
             </div>
-            <div className="p-1.5 rounded-lg text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-500/10 transition shrink-0" title="Update Profile Details">
+            <div className="p-1 rounded-lg text-slate-400 group-hover:text-blue-500 transition shrink-0">
               <Pencil className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          {/* Search bar below profile section */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search features..."
-              value={menuSearchQuery}
-              onChange={(e) => setMenuSearchQuery(e.target.value)}
-              className="w-full pl-8.5 pr-3 py-1.5 bg-slate-100/50 dark:bg-zinc-900/40 border border-slate-200/40 dark:border-zinc-850 rounded-xl font-sans text-[11px] focus:outline-none"
-            />
-          </div>
-
-          {/* Navigation link List */}
-          <nav className="space-y-1">
-            {filteredList.map((item) => {
-              const IconComp = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleMenuSelection(item.id)}
-                  className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition group ${
-                    isActive
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <IconComp className={`w-4 h-4 transition-transform group-hover:scale-105 ${
-                      isActive ? 'text-white' : 'text-slate-400 dark:text-zinc-500'
-                    }`} />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold leading-none ${
-                      isActive ? 'bg-white text-indigo-600' : 'bg-indigo-50 dark:bg-zinc-900 text-indigo-600'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Navigation link List with Sections */}
+          <nav className="space-y-4">
+            {sections.map((secName) => (
+              <div key={secName} className="space-y-1">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-3 block mb-1">
+                  {secName}
+                </span>
+                {filteredList.filter(item => item.section === secName).map((item) => {
+                  const IconComp = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleMenuSelection(item.id)}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition group cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-blue-950/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <IconComp className={`w-4 h-4 transition-transform group-hover:scale-105 ${
+                          isActive ? 'text-white' : 'text-slate-400 dark:text-slate-400'
+                        }`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold leading-none ${
+                          isActive ? 'bg-white text-blue-600' : 'bg-blue-50 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            
             {filteredList.length === 0 && (
               <p className="text-center py-4 text-[10px] text-slate-400 font-mono">NO RESULTS MATCHED</p>
             )}
           </nav>
         </div>
 
-        {/* Pinned Logout Button */}
-        <div className="pt-4 border-t border-slate-100/10">
+        {/* Pinned Bottom: Secure Session & Logout */}
+        <div className="pt-4 border-t border-slate-200/50 dark:border-blue-900/40 space-y-3">
+          {/* Secure Session Badge */}
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+            <div className="min-w-0">
+              <span className="block font-bold leading-tight">256-Bit SSL Encrypted</span>
+              <span className="text-[9px] text-slate-400 dark:text-emerald-400/80 font-mono block">Secure Session Active</span>
+            </div>
+          </div>
+
           <button
             onClick={handleLogOutAction}
-            className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition flex items-center gap-3"
+            className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition flex items-center gap-2.5 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
-            <span>Logout Portal</span>
+            <span>Lock & Sign Out</span>
           </button>
         </div>
       </div>
@@ -1741,8 +1768,9 @@ export default function App() {
 
     // 2. REGULAR USER ROUTING SPACE
     const allowedUserTabs = [
-      'dashboard', 'accounts', 'deposit', 'withdraw', 'transfer', 'transactions', 
-      'cards', 'goals', 'notifications', 'profile', 'security', 'settings', 'support'
+      'dashboard', 'accounts', 'deposit', 'withdraw', 'transfer', 'transfers', 'payments', 
+      'transactions', 'analytics', 'cards', 'goals', 'notifications', 'profile', 
+      'security', 'settings', 'support', 'tax_filing'
     ];
     if (!allowedUserTabs.includes(currentTab)) {
       // Security role gate - instantly fallback to dashboard if they request admin paths
@@ -1787,110 +1815,39 @@ export default function App() {
 
       case 'accounts':
         return activeUserWallet ? (
-          <div className="space-y-8 text-left">
-            {/* Header */}
-            <div>
-              <span className="text-indigo-500 font-mono text-[10px] font-bold uppercase tracking-widest block mb-1">Custody Assets</span>
-              <h2 className="text-2xl font-display font-bold text-slate-900 dark:text-white">Liquid Reserves Ledger</h2>
-              <p className="text-xs text-slate-500 mt-1">Configure checking and savings vault allocations, review wire routing numbers, and transfer assets instantly.</p>
-            </div>
+          <AccountsView
+            user={currentUser}
+            wallet={activeUserWallet}
+            transactions={activeUserTransactions}
+            onTransfer={(amount, from, to) => {
+              if (from === 'checking' && to === 'savings') {
+                handleAddGoalFunds(amount);
+              } else {
+                handleWithdrawGoalFunds(amount);
+              }
+            }}
+            onNavigate={(tab) => setCurrentTab(tab)}
+            isDarkMode={isDarkMode}
+          />
+        ) : null;
 
-            {/* Asset balances */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'}`}>
-                <span className="text-[10px] uppercase font-mono text-slate-400 block font-semibold">Checking Available Balance</span>
-                <span className="text-2xl font-bold font-mono text-indigo-500 mt-2 block">${activeUserWallet.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                <span className="text-[9px] font-mono text-slate-400 block mt-2">ACCOUNT # 9021-4820-221</span>
-              </div>
+      case 'analytics':
+        return activeUserWallet ? (
+          <AnalyticsView
+            transactions={activeUserTransactions}
+            wallet={activeUserWallet}
+            isDarkMode={isDarkMode}
+          />
+        ) : null;
 
-              <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'}`}>
-                <span className="text-[10px] uppercase font-mono text-slate-400 block font-semibold">Savings Vault Reserves</span>
-                <span className="text-2xl font-bold font-mono text-emerald-500 mt-2 block">${activeUserWallet.savingsBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                <span className="text-[9px] font-mono text-slate-400 block mt-2">ROUTING ABA 021000021</span>
-              </div>
-
-              <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} flex flex-col justify-between`}>
-                <div>
-                  <span className="text-[10px] uppercase font-mono text-slate-400 block font-semibold">Compounding APY</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-white mt-1 block">+4.85% Compound interest</span>
-                </div>
-                <span className="text-[9px] font-mono text-emerald-500 font-bold block mt-2 uppercase">● COMPLIANCE ASSURED</span>
-              </div>
-            </div>
-
-            {/* Bidirectional vault allocation form */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-              {/* Form (7 columns) */}
-              <div className={`lg:col-span-7 p-6 sm:p-8 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100 shadow-sm'} flex flex-col justify-between`}>
-                <div>
-                  <h3 className="font-display font-semibold text-sm mb-1">Transfer assets between Available & Savings Vault</h3>
-                  <p className="text-xs text-slate-500">Allocation transfers are settled immediately inside NexaBank without ledger penalties.</p>
-                </div>
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const inputEl = document.getElementById('vault-transfer-amount-input') as HTMLInputElement;
-                    const selectEl = document.getElementById('vault-transfer-dir-select') as HTMLSelectElement;
-                    const val = parseFloat(inputEl?.value);
-                    if (isNaN(val) || val <= 0) {
-                      triggerToast('Specify a valid numerical transfer size.');
-                      return;
-                    }
-                    if (selectEl?.value === 'to_vault') {
-                      handleAddGoalFunds(val);
-                    } else {
-                      handleWithdrawGoalFunds(val);
-                    }
-                    if (inputEl) inputEl.value = '';
-                  }}
-                  className="space-y-5 mt-6"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono uppercase font-bold text-slate-400">Directional Path</label>
-                      <select id="vault-transfer-dir-select" className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs font-semibold">
-                        <option value="to_vault">Checking Available → Savings Vault</option>
-                        <option value="to_checking">Savings Vault → Checking Available</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono uppercase font-bold text-slate-400">Transfer Value (USD)</label>
-                      <input id="vault-transfer-amount-input" type="number" step="0.01" placeholder="e.g. 500.00" className="w-full p-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-xl text-xs font-mono font-bold" />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="px-5 py-2.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 font-semibold rounded-xl text-xs uppercase cursor-pointer">
-                    Authorize Allocation Settle
-                  </button>
-                </form>
-              </div>
-
-              {/* ABA specs card (5 columns) */}
-              <div className={`lg:col-span-5 p-6 rounded-3xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-150 shadow-sm'} space-y-4`}>
-                <h4 className="font-display font-semibold text-xs flex items-center gap-1.5"><Info className="w-4 h-4 text-indigo-500" /> Swift & Routing Specs</h4>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Use the official wire details below to configure inbound direct deposits or international SWIFT wire transfers into NexaBank.
-                </p>
-                
-                <div className="p-4 bg-slate-100/50 dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-850 rounded-2xl text-[11px] font-mono space-y-2 text-slate-500">
-                  <div className="flex justify-between">
-                    <span>ABA Routing speed:</span>
-                    <strong className="text-slate-700 dark:text-zinc-300">Fast Wire (2h)</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Nexa SWIFT code:</span>
-                    <strong className="text-slate-700 dark:text-zinc-300">NEXABANKUS1A</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Asset standard:</span>
-                    <strong className="text-slate-700 dark:text-zinc-300">TRC-20, USD, EUR</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      case 'payments':
+        return activeUserWallet ? (
+          <PaymentsView
+            user={currentUser}
+            wallet={activeUserWallet}
+            onNavigate={(tab) => setCurrentTab(tab)}
+            isDarkMode={isDarkMode}
+          />
         ) : null;
 
       case 'deposit':
